@@ -1,3 +1,8 @@
+FROM golang:1-alpine AS lprobe
+WORKDIR /build
+ADD https://github.com/MShekow/local-health-check.git#main .
+RUN CGO_ENABLED=0 go build -o lprobe .
+
 FROM dhi.io/python:3.14.2-dev AS build-stage
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -11,7 +16,7 @@ COPY requirements-poetry.txt /tmp/
 RUN /tmp/poetry/bin/pip install --no-cache-dir -r /tmp/requirements-poetry.txt
 RUN /tmp/poetry/bin/poetry config virtualenvs.in-project true
 COPY pyproject.toml poetry.lock ./
-RUN /tmp/poetry/bin/poetry install --no-interaction --no-ansi --no-root
+RUN /tmp/poetry/bin/poetry install --no-interaction --no-ansi --no-root --only main
 
 COPY src/ ./src/
 
@@ -21,8 +26,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
 
-# TODO chown root
 COPY --from=build-stage /app /app
+
+COPY --from=lprobe --link /build/lprobe /bin/lprobe
+HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
+    CMD [ "lprobe", "-port=8000", "-endpoint=/health" ]
 
 WORKDIR /app
 

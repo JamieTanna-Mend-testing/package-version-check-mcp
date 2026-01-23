@@ -13,7 +13,6 @@ async def mcp_client():
         yield client
 
 
-@pytest.mark.asyncio
 async def test_get_latest_versions_npm_success(mcp_client: Client):
     """Test fetching a valid NPM package version."""
     result = await mcp_client.call_tool(
@@ -37,7 +36,6 @@ async def test_get_latest_versions_npm_success(mcp_client: Client):
     assert len(result.data.lookup_errors) == 0
 
 
-@pytest.mark.asyncio
 async def test_get_latest_versions_pypi_success(mcp_client: Client):
     """Test fetching a valid PyPI package version."""
     result = await mcp_client.call_tool(
@@ -126,7 +124,6 @@ async def test_get_latest_versions_mixed_success_and_failure(mcp_client: Client)
     assert all("not found" in err.error.lower() for err in result.data.lookup_errors)
 
 
-@pytest.mark.asyncio
 async def test_get_latest_versions_empty_input(mcp_client: Client):
     """Test get_latest_versions with empty input."""
     result = await mcp_client.call_tool(
@@ -139,7 +136,6 @@ async def test_get_latest_versions_empty_input(mcp_client: Client):
     assert len(result.data.lookup_errors) == 0
 
 
-@pytest.mark.asyncio
 async def test_get_latest_versions_multiple_packages(mcp_client: Client):
     """Test get_latest_versions with multiple valid packages."""
     result = await mcp_client.call_tool(

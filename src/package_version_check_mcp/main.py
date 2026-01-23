@@ -241,7 +241,7 @@ async def get_latest_versions(
 
 def main():
     """Main entry point for the MCP server."""
-    mcp.run(transport="sse")
+    mcp.run(transport="sse", host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":
