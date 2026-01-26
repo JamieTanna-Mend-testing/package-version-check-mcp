@@ -6,6 +6,7 @@ services:
     autoDeployTrigger: commit
     buildCommand: poetry install
     startCommand: python src/package_version_check_mcp/main.py
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: "8000"
