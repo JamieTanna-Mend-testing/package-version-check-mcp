@@ -6,6 +6,7 @@ A MCP server that returns the current, up-to-date version of packages you use as
 Currently supported ecosystems:
 - **npm** - Node.js packages from the npm registry
 - **pypi** - Python packages from PyPI
+- **GitHub Actions** - Actions hosted on GitHub
 
 ## Usage
 
@@ -57,6 +58,35 @@ Fetches the latest versions of packages from various ecosystems.
 }
 ```
 
+#### `get_github_action_versions_and_args`
+
+Fetches the latest versions and metadata for GitHub Actions hosted on github.com.
+
+**Input:**
+- `action_names` (required): Array of action names in "owner/repo" format (e.g., ["actions/checkout", "docker/login-action"])
+- `include_readme` (optional): Boolean (default: false), whether to include the action's README.md with usage instructions
+
+**Output:**
+- `result`: Array of successful lookups with:
+  - `name`: The action name (as provided)
+  - `latest_version`: The most recent Git tag (e.g., "v3.2.4")
+  - `metadata`: The action.yml metadata as an object with fields:
+    - `inputs`: Action input parameters
+    - `outputs`: Action outputs
+    - `runs`: Execution configuration
+  - `readme`: (optional) The action's README content if `include_readme` was true
+- `lookup_errors`: Array of errors with:
+  - `name`: The action name (as provided)
+  - `error`: Description of the error
+
+**Example:**
+```json
+{
+  "action_names": ["actions/checkout", "actions/setup-python"],
+  "include_readme": false
+}
+```
+
 ## Development
 
 ### Package management with Poetry
@@ -68,12 +98,12 @@ This separation is necessary to avoid dependency _conflicts_ between the project
 
 Using the `pip` of the Poetry venv, install Poetry via `pip install -r requirements-poetry.txt`
 
-Then, run `poetry install`, but make sure that either no venv is active, or the `.venv` one, but **not** the `.poetry` one (otherwise Poetry would stupidly install the dependencies into that one, unless you previously ran `poetry config virtualenvs.in-project true`).
+Then, run `poetry sync --all-extras`, but make sure that either no venv is active, or the `.venv` one, but **not** the `.poetry` one (otherwise Poetry would stupidly install the dependencies into that one, unless you previously ran `poetry config virtualenvs.in-project true`). The `--all-extras` flag is required to install development dependencies like pytest.
 
 #### Updating dependencies
 
-- When dependencies changed **from the outside**, e.g. because Renovate updated the `pyproject.toml` and `poetry.lock` file, run `poetry sync` to update the local environment. This removes any obsolete dependencies from the `.venv` venv.
-- If **you** updated a dependency in `pyproject.toml`, run `poetry update` to update the lock file and the local environment.
-- To only update the **transitive** dependencies (keeping the ones in `pyproject.toml` the same), run `poetry update --sync`, which updates the lock file and also installs the updates into the active venv.
+- When dependencies changed **from the outside**, e.g. because Renovate updated the `pyproject.toml` and `poetry.lock` file, run `poetry sync --all-extras` to update the local environment. This removes any obsolete dependencies from the `.venv` venv.
+- If **you** updated a dependency in `pyproject.toml`, run `poetry update && poetry sync --all-extras` to update the lock file and install the updated dependencies including extras.
+- To only update the **transitive** dependencies (keeping the ones in `pyproject.toml` the same), run `poetry update && poetry sync --all-extras`, which updates the lock file and installs the updates into the active venv.
 
-Make sure the `.venv` venv is active while running any of the above `poetry` commands.
+Make sure that either no venv is active (or the `.venv` venv is active) while running any of the above `poetry` commands.
