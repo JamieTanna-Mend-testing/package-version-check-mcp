@@ -35,4 +35,5 @@ jobs:
           python -m venv .poetry
           ./.poetry/bin/pip install poetry
           ./.poetry/bin/poetry install --all-extras
+          export GITHUB_PAT=${{ secrets.GH_READONLY_PAT_NO_SCOPES }}
           ./.poetry/bin/poetry run pytest
