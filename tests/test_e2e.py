@@ -11,6 +11,12 @@ import pytest
 from fastmcp import Client
 from testcontainers.core.container import DockerContainer
 
+from package_version_check_mcp.main import (
+    Ecosystem,
+    PackageVersionRequest,
+    GetLatestVersionsResponse,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,20 +87,21 @@ async def test_get_latest_versions_npm_success_e2e(mcp_client: Client):
         name="get_latest_versions",
         arguments={
             "packages": [
-                {"ecosystem": "npm", "package_name": "express"}
+                PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="express")
             ]
         }
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 1
-    assert result.data.result[0].ecosystem == "npm"
-    assert result.data.result[0].package_name == "express"
-    assert result.data.result[0].latest_version != ""
+    assert result.structured_content is not None
+    response = GetLatestVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 1
+    assert response.result[0].ecosystem == "npm"
+    assert response.result[0].package_name == "express"
+    assert response.result[0].latest_version != ""
     # Express should have a version like "4.x.x" or "5.x.x"
-    assert "." in result.data.result[0].latest_version
+    assert "." in response.result[0].latest_version
     # Should have a publication date
-    assert result.data.result[0].published_on is not None
-    assert len(result.data.lookup_errors) == 0
+    assert response.result[0].published_on is not None
+    assert len(response.lookup_errors) == 0
 
-    logger.info("✓ E2E test passed: Got express version %s", result.data.result[0].latest_version)
+    logger.info("✓ E2E test passed: Got express version %s", response.result[0].latest_version)

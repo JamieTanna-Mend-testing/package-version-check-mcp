@@ -3,7 +3,10 @@
 import pytest
 from fastmcp import Client
 
-from package_version_check_mcp.main import mcp
+from package_version_check_mcp.main import (
+    mcp,
+    GetGitHubActionVersionsResponse,
+)
 
 
 @pytest.fixture
@@ -23,18 +26,17 @@ async def test_get_github_action_versions_basic(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 1
-    assert len(result.data.lookup_errors) == 0
-
-    # Access the structured content instead of the data object for nested dicts
     assert result.structured_content is not None
-    action_data = result.structured_content["result"][0]
-    assert action_data["name"] == "actions/checkout"
-    assert action_data["latest_version"].startswith("v")  # Should be like "v4.2.1"
-    assert "inputs" in action_data["metadata"]
-    assert "runs" in action_data["metadata"]
-    assert action_data["readme"] is None
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 1
+    assert len(response.lookup_errors) == 0
+
+    action_data = response.result[0]
+    assert action_data.name == "actions/checkout"
+    assert action_data.latest_version.startswith("v")  # Should be like "v4.2.1"
+    assert "inputs" in action_data.metadata
+    assert "runs" in action_data.metadata
+    assert action_data.readme is None
 
 
 async def test_get_github_action_versions_with_readme(mcp_client: Client):
@@ -47,13 +49,13 @@ async def test_get_github_action_versions_with_readme(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 1
     assert result.structured_content is not None
-    action_data = result.structured_content["result"][0]
-    assert action_data["readme"] is not None
-    assert len(action_data["readme"]) > 0
-    assert "checkout" in action_data["readme"].lower()
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 1
+    action_data = response.result[0]
+    assert action_data.readme is not None
+    assert len(action_data.readme) > 0
+    assert "checkout" in action_data.readme.lower()
 
 
 async def test_get_github_action_versions_multiple(mcp_client: Client):
@@ -66,17 +68,17 @@ async def test_get_github_action_versions_multiple(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 2
-    assert len(result.data.lookup_errors) == 0
-
     assert result.structured_content is not None
-    names = {action["name"] for action in result.structured_content["result"]}
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 2
+    assert len(response.lookup_errors) == 0
+
+    names = {action.name for action in response.result}
     assert names == {"actions/checkout", "actions/setup-python"}
 
-    for action_data in result.structured_content["result"]:
-        assert action_data["latest_version"].startswith("v")
-        assert "runs" in action_data["metadata"]
+    for action_data in response.result:
+        assert action_data.latest_version.startswith("v")
+        assert "runs" in action_data.metadata
 
 
 async def test_get_github_action_versions_not_found(mcp_client: Client):
@@ -89,14 +91,14 @@ async def test_get_github_action_versions_not_found(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 0
-    assert len(result.data.lookup_errors) == 1
-
     assert result.structured_content is not None
-    error = result.structured_content["lookup_errors"][0]
-    assert error["name"] == "nonexistent-owner/nonexistent-repo-xyz123"
-    assert "not found" in error["error"].lower()
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 0
+    assert len(response.lookup_errors) == 1
+
+    error = response.lookup_errors[0]
+    assert error.name == "nonexistent-owner/nonexistent-repo-xyz123"
+    assert "not found" in error.error.lower()
 
 
 async def test_get_github_action_versions_mixed(mcp_client: Client):
@@ -109,13 +111,13 @@ async def test_get_github_action_versions_mixed(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 1
-    assert len(result.data.lookup_errors) == 1
-
     assert result.structured_content is not None
-    assert result.structured_content["result"][0]["name"] == "actions/checkout"
-    assert result.structured_content["lookup_errors"][0]["name"] == "nonexistent/action"
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 1
+    assert len(response.lookup_errors) == 1
+
+    assert response.result[0].name == "actions/checkout"
+    assert response.lookup_errors[0].name == "nonexistent/action"
 
 
 async def test_get_github_action_versions_invalid_format(mcp_client: Client):
@@ -128,11 +130,11 @@ async def test_get_github_action_versions_invalid_format(mcp_client: Client):
         },
     )
 
-    assert result.data is not None
-    assert len(result.data.result) == 0
-    assert len(result.data.lookup_errors) == 1
-
     assert result.structured_content is not None
-    error = result.structured_content["lookup_errors"][0]
-    assert error["name"] == "invalid-format"
-    assert "invalid" in error["error"].lower()
+    response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 0
+    assert len(response.lookup_errors) == 1
+
+    error = response.lookup_errors[0]
+    assert error.name == "invalid-format"
+    assert "invalid" in error.error.lower()
