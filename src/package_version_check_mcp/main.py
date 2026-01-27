@@ -4,10 +4,12 @@ A FastMCP server that checks the latest versions of packages across different ec
 """
 
 import asyncio
-from dataclasses import dataclass
+import os
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
+
+from pydantic import BaseModel
 
 import httpx
 import yaml
@@ -32,8 +34,7 @@ class Ecosystem(str, Enum):
     PYPI = "pypi"
 
 
-@dataclass
-class PackageVersionRequest:
+class PackageVersionRequest(BaseModel):
     """Request for a package version lookup."""
 
     ecosystem: Ecosystem
@@ -41,8 +42,7 @@ class PackageVersionRequest:
     version: Optional[str] = None
 
 
-@dataclass
-class PackageVersionResult:
+class PackageVersionResult(BaseModel):
     """Successful package version lookup result."""
 
     ecosystem: str
@@ -52,8 +52,7 @@ class PackageVersionResult:
     published_on: Optional[str] = None
 
 
-@dataclass
-class PackageVersionError:
+class PackageVersionError(BaseModel):
     """Error during package version lookup."""
 
     ecosystem: str
@@ -61,16 +60,14 @@ class PackageVersionError:
     error: str
 
 
-@dataclass
-class GetLatestVersionsResponse:
+class GetLatestVersionsResponse(BaseModel):
     """Response from get_latest_versions tool."""
 
     result: list[PackageVersionResult]
     lookup_errors: list[PackageVersionError]
 
 
-@dataclass
-class GitHubActionResult:
+class GitHubActionResult(BaseModel):
     """Successful GitHub action lookup result."""
 
     name: str
@@ -79,16 +76,14 @@ class GitHubActionResult:
     readme: Optional[str] = None
 
 
-@dataclass
-class GitHubActionError:
+class GitHubActionError(BaseModel):
     """Error during GitHub action lookup."""
 
     name: str
     error: str
 
 
-@dataclass
-class GetGitHubActionVersionsResponse:
+class GetGitHubActionVersionsResponse(BaseModel):
     """Response from get_github_action_versions_and_args tool."""
 
     result: list[GitHubActionResult]
@@ -393,9 +388,15 @@ async def fetch_github_action(
 
         owner, repo = parts
 
+        # Prepare headers with optional GitHub PAT authentication
+        headers = {"Accept": "application/vnd.github.v3+json"}
+        github_pat = os.environ.get("GITHUB_PAT")
+        if github_pat:
+            headers["Authorization"] = f"token {github_pat}"
+
         async with httpx.AsyncClient(
             timeout=30.0,
-            headers={"Accept": "application/vnd.github.v3+json"},
+            headers=headers,
         ) as client:
             # Fetch the latest tag
             latest_tag = await fetch_github_action_latest_tag(owner, repo, client)
