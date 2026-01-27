@@ -34,6 +34,8 @@ async def test_get_github_action_versions_basic(mcp_client: Client):
     action_data = response.result[0]
     assert action_data.name == "actions/checkout"
     assert action_data.latest_version.startswith("v")  # Should be like "v4.2.1"
+    assert action_data.digest is not None
+    assert len(action_data.digest) == 40  # SHA-1 hash is 40 hex characters
     assert "inputs" in action_data.metadata
     assert "runs" in action_data.metadata
     assert action_data.readme is None
@@ -78,6 +80,8 @@ async def test_get_github_action_versions_multiple(mcp_client: Client):
 
     for action_data in response.result:
         assert action_data.latest_version.startswith("v")
+        assert action_data.digest is not None
+        assert len(action_data.digest) == 40  # SHA-1 hash is 40 hex characters
         assert "runs" in action_data.metadata
 
 

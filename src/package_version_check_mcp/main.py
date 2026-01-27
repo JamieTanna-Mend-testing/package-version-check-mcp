@@ -73,6 +73,7 @@ class GitHubActionResult(BaseModel):
 
     name: str
     latest_version: str
+    digest: str  # Commit SHA that the tag points to
     metadata: dict[str, Any]  # action.yml fields: inputs, outputs, runs
     readme: Optional[str] = None
 
@@ -264,7 +265,7 @@ async def get_latest_versions(
 
 async def fetch_github_action_latest_tag(
     owner: str, repo: str, client: httpx.AsyncClient
-) -> str:
+) -> tuple[str, str]:
     """Fetch the latest Git tag for a GitHub repository.
 
     Args:
@@ -273,7 +274,7 @@ async def fetch_github_action_latest_tag(
         client: httpx AsyncClient to use for requests
 
     Returns:
-        The latest tag name (e.g., "v3.2.4")
+        A tuple of (tag_name, commit_sha) e.g., ("v3.2.4", "abc123...")
 
     Raises:
         Exception: If tags cannot be fetched
@@ -288,8 +289,8 @@ async def fetch_github_action_latest_tag(
     if not tags:
         raise ValueError(f"No tags found for {owner}/{repo}")
 
-    # Return the first (most recent) tag
-    return tags[0]["name"]
+    # Return the first (most recent) tag name and its commit SHA
+    return tags[0]["name"], tags[0]["commit"]["sha"]
 
 
 async def fetch_github_action_metadata(
@@ -399,8 +400,8 @@ async def fetch_github_action(
             timeout=30.0,
             headers=headers,
         ) as client:
-            # Fetch the latest tag
-            latest_tag = await fetch_github_action_latest_tag(owner, repo, client)
+            # Fetch the latest tag and its commit SHA
+            latest_tag, commit_sha = await fetch_github_action_latest_tag(owner, repo, client)
 
             # Fetch the action.yml metadata
             metadata = await fetch_github_action_metadata(owner, repo, latest_tag, client)
@@ -413,6 +414,7 @@ async def fetch_github_action(
             return GitHubActionResult(
                 name=action_name,
                 latest_version=latest_tag,
+                digest=commit_sha,
                 metadata=metadata,
                 readme=readme,
             )
@@ -451,6 +453,7 @@ async def get_github_action_versions_and_args(
             - result: List of successful action lookups with:
                 - name: The action name (as provided)
                 - latest_version: The most recent Git tag (e.g., "v3.2.4")
+                - digest: The commit SHA that the tag points to
                 - metadata: The action.yml fields (inputs, outputs, runs) as a dict
                 - readme: (optional) The README content if include_readme was True
             - lookup_errors: List of errors that occurred during lookup with:
