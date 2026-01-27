@@ -30,4 +30,9 @@ jobs:
         run: docker build -t package-version-check-mcp .
 
       - name: Run pytest
-        run: pytest
+        run: |
+          python -m venv .venv
+          python -m venv .poetry
+          ./.poetry/bin/pip install poetry
+          ./.poetry/bin/poetry install
+          ./.poetry/bin/poetry run pytest
