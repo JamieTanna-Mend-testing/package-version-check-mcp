@@ -3,6 +3,7 @@
 A FastMCP server that checks the latest versions of packages across different ecosystems.
 """
 
+import argparse
 import asyncio
 import os
 from datetime import datetime
@@ -483,7 +484,19 @@ async def get_github_action_versions_and_args(
 
 def main():
     """Main entry point for the MCP server."""
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+    parser = argparse.ArgumentParser(description="Package Version Check MCP Server")
+    parser.add_argument(
+        "--mode",
+        choices=["http", "stdio"],
+        default="stdio",
+        help="Transport mode: 'http' for HTTP server, 'stdio' for stdio transport (default: stdio)"
+    )
+    args = parser.parse_args()
+
+    if args.mode == "http":
+        mcp.run(transport="http", host="0.0.0.0", port=8000)
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":

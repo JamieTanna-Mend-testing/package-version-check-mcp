@@ -38,4 +38,5 @@ WORKDIR /app
 
 EXPOSE 8000
 
-CMD ["python", "/app/src/package_version_check_mcp/main.py"]
+ENTRYPOINT ["python", "/app/src/package_version_check_mcp/main.py"]
+CMD ["--mode=http"]
