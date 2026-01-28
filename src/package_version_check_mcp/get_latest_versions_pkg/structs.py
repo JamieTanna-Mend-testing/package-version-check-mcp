@@ -8,8 +8,9 @@ class Ecosystem(str, Enum):
     """Supported package ecosystems."""
 
     NPM = "npm"
-    PYPI = "pypi"
-    DOCKER = "docker"
+    PyPI = "pypi"
+    Docker = "docker"
+    NuGet = "nuget"
 
 
 class PackageVersionRequest(BaseModel):

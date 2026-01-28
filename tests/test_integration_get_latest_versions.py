@@ -19,8 +19,9 @@ async def mcp_client():
 
 @pytest.mark.parametrize("ecosystem,package_name", [
     (Ecosystem.NPM, "express"),
-    (Ecosystem.PYPI, "requests"),
-    (Ecosystem.DOCKER, "index.docker.io/library/busybox"),
+    (Ecosystem.PyPI, "requests"),
+    (Ecosystem.Docker, "index.docker.io/library/busybox"),
+    (Ecosystem.NuGet, "Newtonsoft.Json"),
 ])
 async def test_get_latest_versions_success(mcp_client: Client, ecosystem, package_name):
     """Test fetching valid package versions from different ecosystems."""
@@ -40,14 +41,14 @@ async def test_get_latest_versions_success(mcp_client: Client, ecosystem, packag
     assert response.result[0].package_name == package_name
     assert "." in response.result[0].latest_version
 
-    if ecosystem is Ecosystem.DOCKER:
+    if ecosystem is Ecosystem.Docker:
         assert response.result[0].digest is not None
         assert response.result[0].digest.startswith("sha256:")
 
     assert len(response.lookup_errors) == 0
 
 
-@pytest.mark.parametrize("ecosystem", [Ecosystem.NPM, Ecosystem.PYPI])
+@pytest.mark.parametrize("ecosystem", [Ecosystem.NPM, Ecosystem.PyPI, Ecosystem.NuGet])
 async def test_get_latest_versions_not_found(mcp_client: Client, ecosystem):
     """Test fetching non-existent packages from different ecosystems."""
     package_name = "this-package-definitely-does-not-exist-12345678"
@@ -76,9 +77,9 @@ async def test_get_latest_versions_mixed_success_and_failure(mcp_client: Client)
         arguments={
             "packages": [
                 PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="express"),
-                PackageVersionRequest(ecosystem=Ecosystem.PYPI, package_name="requests"),
+                PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="requests"),
                 PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="this-does-not-exist-99999"),
-                PackageVersionRequest(ecosystem=Ecosystem.PYPI, package_name="this-also-does-not-exist-99999"),
+                PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="this-also-does-not-exist-99999"),
             ]
         }
     )
@@ -118,8 +119,8 @@ async def test_get_latest_versions_multiple_packages(mcp_client: Client):
             "packages": [
                 PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="express"),
                 PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="react"),
-                PackageVersionRequest(ecosystem=Ecosystem.PYPI, package_name="requests"),
-                PackageVersionRequest(ecosystem=Ecosystem.PYPI, package_name="flask"),
+                PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="requests"),
+                PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="flask"),
             ]
         }
     )
@@ -151,7 +152,7 @@ async def test_get_latest_versions_docker_with_tag_hint(mcp_client: Client, pack
         arguments={
             "packages": [
                 PackageVersionRequest(
-                    ecosystem=Ecosystem.DOCKER,
+                    ecosystem=Ecosystem.Docker,
                     package_name=package_name,
                     version=version_hint
                 )

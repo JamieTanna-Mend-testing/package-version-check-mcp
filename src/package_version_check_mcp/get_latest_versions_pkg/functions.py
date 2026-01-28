@@ -72,9 +72,11 @@ async def fetch_package_version(
     try:
         if request.ecosystem == Ecosystem.NPM:
             return await fetch_npm_version(request.package_name)
-        elif request.ecosystem == Ecosystem.DOCKER:
+        elif request.ecosystem == Ecosystem.Docker:
             return await fetch_docker_version(request.package_name, request.version)
-        else: # Ecosystem.PYPI:
+        elif request.ecosystem == Ecosystem.NuGet:
+            return await fetch_nuget_version(request.package_name)
+        else: # Ecosystem.PyPI:
             return await fetch_pypi_version(request.package_name)
     except httpx.HTTPStatusError as e:
         error_msg = f"HTTP error {e.response.status_code}: {e.response.reason_phrase}"
@@ -127,6 +129,60 @@ async def fetch_npm_version(package_name: str) -> PackageVersionResult:
             digest=None,  # NPM doesn't provide digest in the same way
             published_on=published_on,
         )
+
+
+async def fetch_nuget_version(package_name: str) -> PackageVersionResult:
+    """Fetch the latest stable version of a NuGet package.
+
+    Args:
+        package_name: The name of the NuGet package
+
+    Returns:
+        PackageVersionResult with the latest version information
+
+    Raises:
+        Exception: If the package cannot be found or fetched
+    """
+    # NuGet V3 API - Use the registration API
+    registrations_url = "https://api.nuget.org/v3/registration5-semver1/"
+    package_url = f"{registrations_url}{package_name.lower()}/index.json"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(package_url)
+        response.raise_for_status()
+        package_data = response.json()
+
+        # Extract all versions
+        all_versions = []
+        items = package_data.get("items", [])
+        for page in items:
+            page_items = page.get("items", [])
+            for item in page_items:
+                catalog_entry = item.get("catalogEntry", {})
+                version = catalog_entry.get("version")
+                published = catalog_entry.get("published")
+
+                # Filter out prerelease versions (they contain a hyphen)
+                if version and "-" not in version:
+                    all_versions.append({
+                        "version": version,
+                        "published": published
+                    })
+
+        if not all_versions:
+            raise Exception(f"No stable versions found for package '{package_name}'")
+
+        # Get the latest stable version (last in the list)
+        latest = all_versions[-1]
+
+        return PackageVersionResult(
+            ecosystem="nuget",
+            package_name=package_name,
+            latest_version=latest["version"],
+            digest=None,  # NuGet doesn't provide digest in the registration API
+            published_on=latest["published"] if latest["published"] != "1900-01-01T00:00:00+00:00" else None,
+        )
+
 
 
 async def fetch_docker_version(
