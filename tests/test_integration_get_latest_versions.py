@@ -22,6 +22,9 @@ async def mcp_client():
     (Ecosystem.PyPI, "requests"),
     (Ecosystem.Docker, "index.docker.io/library/busybox"),
     (Ecosystem.NuGet, "Newtonsoft.Json"),
+    (Ecosystem.MavenGradle, "org.springframework:spring-core"),
+    (Ecosystem.MavenGradle, "com.google.guava:guava"),
+    (Ecosystem.MavenGradle, "org.apache.commons:commons-lang3"),
 ])
 async def test_get_latest_versions_success(mcp_client: Client, ecosystem, package_name):
     """Test fetching valid package versions from different ecosystems."""
@@ -45,13 +48,22 @@ async def test_get_latest_versions_success(mcp_client: Client, ecosystem, packag
         assert response.result[0].digest is not None
         assert response.result[0].digest.startswith("sha256:")
 
+    if ecosystem is Ecosystem.MavenGradle:
+        # Maven/Gradle doesn't provide digest or published_on
+        assert response.result[0].digest is None
+        assert response.result[0].published_on is None
+
     assert len(response.lookup_errors) == 0
 
 
-@pytest.mark.parametrize("ecosystem", [Ecosystem.NPM, Ecosystem.PyPI, Ecosystem.NuGet])
-async def test_get_latest_versions_not_found(mcp_client: Client, ecosystem):
+@pytest.mark.parametrize("ecosystem,package_name", [
+    (Ecosystem.NPM, "this-package-definitely-does-not-exist-12345678"),
+    (Ecosystem.PyPI, "this-package-definitely-does-not-exist-12345678"),
+    (Ecosystem.NuGet, "this-package-definitely-does-not-exist-12345678"),
+    (Ecosystem.MavenGradle, "org.nonexistent:this-package-definitely-does-not-exist-12345678"),
+])
+async def test_get_latest_versions_not_found(mcp_client: Client, ecosystem, package_name):
     """Test fetching non-existent packages from different ecosystems."""
-    package_name = "this-package-definitely-does-not-exist-12345678"
     result = await mcp_client.call_tool(
         name="get_latest_versions",
         arguments={

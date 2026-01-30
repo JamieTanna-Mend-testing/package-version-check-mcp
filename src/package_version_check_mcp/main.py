@@ -32,16 +32,18 @@ async def get_latest_versions(
 ) -> GetLatestVersionsResponse:
     """Get the latest versions of packages from various ecosystems.
 
-    This tool fetches the latest version information for packages from NPM, PyPI, Docker, and NuGet.
+    This tool fetches the latest version information for packages from NPM, PyPI, Docker, NuGet, and Maven/Gradle.
     It returns both successful lookups and any errors that occurred.
 
     Args:
         packages: A list of package version requests with:
-            - ecosystem: "npm", "pypi", "docker", or "nuget"
+            - ecosystem: "npm", "pypi", "docker", "nuget", or "maven_gradle"
             - package_name: The name of the package (e.g., "express", "requests", "Newtonsoft.Json")
               For Docker, this must be fully qualified (e.g., "index.docker.io/library/busybox")
+              For Maven/Gradle, use format "[registry:]<groupId>:<artifactId>" (e.g., "org.springframework:spring-core" for Maven Central,
+              "maven.google.com:com.google.android.material:material" for Google Maven)
             - version: (optional) For Docker, used as a tag compatibility hint (e.g., "1.2-alpine")
-              to find the latest tag matching the same suffix pattern. For NPM/PyPI/NuGet, not used.
+              to find the latest tag matching the same suffix pattern. For NPM/PyPI/NuGet/Maven, not used.
 
     Returns:
         GetLatestVersionsResponse containing:
@@ -61,6 +63,7 @@ async def get_latest_versions(
         ...     PackageVersionRequest(ecosystem=Ecosystem.NPM, package_name="express"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="requests"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.NuGet, package_name="Newtonsoft.Json"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.MavenGradle, package_name="org.springframework:spring-core"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Docker, package_name="index.docker.io/library/alpine", version="3.19-alpine")
         ... ])
     """

@@ -1,5 +1,5 @@
 import pytest
-from package_version_check_mcp.get_latest_versions_pkg.functions import determine_latest_image_tag
+from package_version_check_mcp.get_latest_versions_pkg.functions import determine_latest_image_tag, parse_maven_package_name
 
 
 @pytest.mark.parametrize(
@@ -131,3 +131,92 @@ def test_determine_latest_image_tag(available_tags, tag_hint, expected_result, t
     """Test determine_latest_image_tag function with various inputs."""
     result = determine_latest_image_tag(available_tags, tag_hint)
     assert result == expected_result, f"Failed: {test_description}"
+
+
+@pytest.mark.parametrize(
+    "package_name,expected_registry,expected_group_id,expected_artifact_id,test_description",
+    [
+        # Test 1: Simple Maven Central package (no registry prefix)
+        (
+            "org.springframework:spring-core",
+            "https://repo1.maven.org/maven2",
+            "org.springframework",
+            "spring-core",
+            "Maven Central package - groupId:artifactId format"
+        ),
+        # Test 2: Package with custom registry
+        (
+            "https://maven.google.com:com.google.android:android",
+            "https://maven.google.com",
+            "com.google.android",
+            "android",
+            "Custom registry - full URL with https"
+        ),
+        # Test 3: Package with registry without https prefix
+        (
+            "repo.spring.io/release:org.springframework:spring-core",
+            "https://repo.spring.io/release",
+            "org.springframework",
+            "spring-core",
+            "Registry without https prefix - should add https"
+        ),
+        # Test 4: Package with http registry
+        (
+            "http://internal.repo:com.company:artifact",
+            "http://internal.repo",
+            "com.company",
+            "artifact",
+            "HTTP registry - should preserve http protocol"
+        ),
+        # Test 5: Registry with trailing slash
+        (
+            "https://maven.example.com/:org.example:mylib",
+            "https://maven.example.com",
+            "org.example",
+            "mylib",
+            "Registry with trailing slash - should remove trailing slash"
+        ),
+    ],
+)
+def test_parse_maven_package_name_success(package_name, expected_registry, expected_group_id, expected_artifact_id, test_description):
+    """Test parse_maven_package_name with valid inputs."""
+    registry, group_id, artifact_id = parse_maven_package_name(package_name)
+    assert registry == expected_registry, f"Failed registry: {test_description}"
+    assert group_id == expected_group_id, f"Failed group_id: {test_description}"
+    assert artifact_id == expected_artifact_id, f"Failed artifact_id: {test_description}"
+
+
+@pytest.mark.parametrize(
+    "package_name,test_description",
+    [
+        # Test 1: Missing artifact ID
+        (
+            "org.springframework",
+            "Missing artifact ID - only one part"
+        ),
+        # Test 2: Too many colons
+        (
+            "a:b:c:d",
+            "Too many colons - four parts"
+        ),
+        # Test 3: Empty group ID
+        (
+            ":spring-core",
+            "Empty group ID"
+        ),
+        # Test 4: Empty artifact ID
+        (
+            "org.springframework:",
+            "Empty artifact ID"
+        ),
+        # Test 5: Empty package name
+        (
+            "",
+            "Empty package name"
+        ),
+    ],
+)
+def test_parse_maven_package_name_invalid(package_name, test_description):
+    """Test parse_maven_package_name with invalid inputs."""
+    with pytest.raises(ValueError):
+        parse_maven_package_name(package_name)

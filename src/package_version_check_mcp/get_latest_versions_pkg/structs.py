@@ -11,6 +11,7 @@ class Ecosystem(str, Enum):
     PyPI = "pypi"
     Docker = "docker"
     NuGet = "nuget"
+    MavenGradle = "maven_gradle"
 
 
 class PackageVersionRequest(BaseModel):
