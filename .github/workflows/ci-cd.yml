@@ -133,3 +133,7 @@ jobs:
           IMAGE_TAG="${{ steps.meta.outputs.tags }}"
           IMAGE_NAME="${IMAGE_TAG%:*}"
           cosign sign --yes --recursive ${IMAGE_NAME}@${{ steps.build-and-push.outputs.digest }}
+
+      - name: Trigger Render redeploy
+        # Hide output on success, show error details on failure
+        run: curl -fsS {{ secrets.RENDER_DEPLOYHOOK_URL }}
