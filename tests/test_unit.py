@@ -438,3 +438,92 @@ def test_parse_terraform_module_name_invalid(package_name, test_description):
     """Test parse_terraform_module_name with invalid inputs."""
     with pytest.raises(ValueError):
         parse_terraform_module_name(package_name)
+
+
+# ============================================================================
+# PHP check_php_constraint tests
+# ============================================================================
+
+from package_version_check_mcp.get_latest_versions_pkg.fetchers.php import check_php_constraint
+
+
+@pytest.mark.parametrize(
+    "php_constraint,target_php_version,expected_result,test_description",
+    [
+        # Basic >= operator
+        (">=8.1", "8.1", True, ">= operator - exact match"),
+        (">=8.1", "8.2", True, ">= operator - higher version"),
+        (">=8.1", "8.0", False, ">= operator - lower version"),
+        (">=8.1", "9.0", True, ">= operator - next major version"),
+        (">=7.4", "8.1", True, ">= operator - target much higher"),
+
+        # Basic > operator
+        (">8.1", "8.2", True, "> operator - higher version"),
+        (">8.1", "8.1", False, "> operator - exact match should fail"),
+        (">8.1", "8.0", False, "> operator - lower version"),
+
+        # Basic <= operator
+        ("<=8.1", "8.1", True, "<= operator - exact match"),
+        ("<=8.1", "8.0", True, "<= operator - lower version"),
+        ("<=8.1", "8.2", False, "<= operator - higher version"),
+
+        # Basic < operator
+        ("<8.2", "8.1", True, "< operator - lower version"),
+        ("<8.2", "8.2", False, "< operator - exact match should fail"),
+        ("<8.2", "8.3", False, "< operator - higher version"),
+
+        # Caret operator (treated as >=)
+        ("^8.1", "8.1", True, "^ operator - exact match"),
+        ("^8.1", "8.2", True, "^ operator - higher minor"),
+        ("^8.1", "8.0", False, "^ operator - lower version"),
+        ("^7.4", "8.0", True, "^ operator - next major allowed"),
+
+        # Tilde operator (treated as >=)
+        ("~8.1", "8.1", True, "~ operator - exact match"),
+        ("~8.1", "8.2", True, "~ operator - higher minor"),
+        ("~8.1", "7.4", False, "~ operator - lower version"),
+
+        # No operator (treated as >=)
+        ("8.1", "8.1", True, "No operator - exact match"),
+        ("8.1", "8.2", True, "No operator - higher version"),
+        ("8.1", "8.0", False, "No operator - lower version"),
+
+        # OR constraints (||)
+        (">=7.2 || >=8.0", "7.4", True, "OR constraint - matches first part"),
+        (">=7.2 || >=8.0", "8.1", True, "OR constraint - matches second part"),
+        (">=7.4 || >=8.0", "7.2", False, "OR constraint - matches neither"),
+        ("^7.4 || ^8.0", "8.2", True, "OR constraint with caret - matches second"),
+        (">=7.2||>=8.0", "7.4", True, "OR constraint without spaces"),
+
+        # AND constraints (comma-separated)
+        (">=8.0, <9.0", "8.1", True, "AND constraint - in range"),
+        (">=8.0, <9.0", "9.0", False, "AND constraint - at upper bound"),
+        (">=8.0, <9.0", "7.4", False, "AND constraint - below range"),
+        (">=8.0,<9.0", "8.5", True, "AND constraint without spaces"),
+
+        # Complex constraints
+        (">=7.2.5 || ^8.0", "7.2.6", True, "Complex - patch version higher"),
+        (">=7.2.5 || ^8.0", "7.2.4", False, "Complex - patch version lower"),
+        (">=8.1.0", "8.1", True, "Three-part constraint vs two-part target"),
+        (">=8.1", "8.1.5", True, "Two-part constraint vs three-part target"),
+
+        # Version with prerelease suffix (should strip it)
+        (">=8.1.0-beta", "8.1", True, "Constraint with prerelease suffix"),
+        (">=8.1.0@dev", "8.1", True, "Constraint with @dev suffix"),
+
+        # Equality operators
+        ("==8.1", "8.1", True, "== operator - exact match"),
+        ("==8.1", "8.2", False, "== operator - different version"),
+        ("=8.1", "8.1", True, "= operator - exact match"),
+        ("!=8.1", "8.2", True, "!= operator - different version"),
+        ("!=8.1", "8.1", False, "!= operator - same version"),
+
+        # Edge cases
+        (">=8", "8.1", True, "Single digit constraint"),
+        (">=8.1.2.3", "8.1.2.4", True, "Four-part version"),
+    ],
+)
+def test_check_php_constraint(php_constraint, target_php_version, expected_result, test_description):
+    """Test check_php_constraint with various constraint formats."""
+    result = check_php_constraint(php_constraint, target_php_version)
+    assert result == expected_result, f"Failed: {test_description}"

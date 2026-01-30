@@ -39,6 +39,9 @@ async def mcp_client():
     (Ecosystem.TerraformModule, "registry.terraform.io/Azure/network/azurerm"),
     (Ecosystem.Go, "github.com/gin-gonic/gin"),
     (Ecosystem.Go, "github.com/google/uuid"),
+    (Ecosystem.PHP, "monolog/monolog"),
+    (Ecosystem.PHP, "laravel/framework"),
+    (Ecosystem.PHP, "symfony/console"),
 ])
 async def test_get_latest_versions_success(mcp_client: Client, ecosystem, package_name):
     """Test fetching valid package versions from different ecosystems."""
@@ -71,6 +74,11 @@ async def test_get_latest_versions_success(mcp_client: Client, ecosystem, packag
         assert response.result[0].published_on is not None
         assert response.result[0].digest is not None
 
+    if ecosystem is Ecosystem.PHP:
+        # PHP packages should have published_on but no digest
+        assert response.result[0].published_on is not None
+        assert response.result[0].digest is None
+
     assert len(response.lookup_errors) == 0
 
 
@@ -84,6 +92,7 @@ async def test_get_latest_versions_success(mcp_client: Client, ecosystem, packag
     (Ecosystem.TerraformProvider, "nonexistent-namespace-12345/nonexistent-provider-12345"),
     (Ecosystem.TerraformModule, "nonexistent-namespace-12345/nonexistent-module-12345/aws"),
     (Ecosystem.Go, "github.com/nonexistent-user-12345/nonexistent-repo-12345"),
+    (Ecosystem.PHP, "nonexistent-vendor-12345/nonexistent-package-12345"),
 ])
 async def test_get_latest_versions_not_found(mcp_client: Client, ecosystem, package_name):
     """Test fetching non-existent packages from different ecosystems."""
@@ -208,4 +217,36 @@ async def test_get_latest_versions_docker_with_tag_hint(mcp_client: Client, pack
     # Should have a digest
     assert response.result[0].digest is not None
     assert response.result[0].digest.startswith("sha256:")
+    assert len(response.lookup_errors) == 0
+
+
+@pytest.mark.parametrize("package_name,version_hint", [
+    ("monolog/monolog", "php:8.1"),
+    ("monolog/monolog", "8.2"),
+    ("symfony/console", "php:8.1"),
+])
+async def test_get_latest_versions_php_with_version_hint(mcp_client: Client, package_name, version_hint):
+    """Test fetching PHP package versions with PHP version compatibility hint."""
+    result = await mcp_client.call_tool(
+        name="get_latest_versions",
+        arguments={
+            "packages": [
+                PackageVersionRequest(
+                    ecosystem=Ecosystem.PHP,
+                    package_name=package_name,
+                    version=version_hint
+                )
+            ]
+        }
+    )
+
+    assert result.structured_content is not None
+    response = GetLatestVersionsResponse.model_validate(result.structured_content)
+    assert len(response.result) == 1
+    assert response.result[0].ecosystem is Ecosystem.PHP
+    assert response.result[0].package_name == package_name
+    assert "." in response.result[0].latest_version
+    # PHP packages should have published_on but no digest
+    assert response.result[0].published_on is not None
+    assert response.result[0].digest is None
     assert len(response.lookup_errors) == 0

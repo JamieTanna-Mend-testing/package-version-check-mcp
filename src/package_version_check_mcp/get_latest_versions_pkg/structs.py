@@ -16,6 +16,7 @@ class Ecosystem(str, Enum):
     TerraformProvider = "terraform_provider"
     TerraformModule = "terraform_module"
     Go = "go"
+    PHP = "php"
 
 
 class PackageVersionRequest(BaseModel):

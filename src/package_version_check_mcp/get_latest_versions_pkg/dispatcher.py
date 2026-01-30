@@ -13,6 +13,7 @@ from .fetchers import (
     fetch_terraform_provider_version,
     fetch_terraform_module_version,
     fetch_go_version,
+    fetch_php_version,
 )
 
 
@@ -44,6 +45,8 @@ async def fetch_package_version(
             return await fetch_terraform_module_version(request.package_name)
         elif request.ecosystem == Ecosystem.Go:
             return await fetch_go_version(request.package_name)
+        elif request.ecosystem == Ecosystem.PHP:
+            return await fetch_php_version(request.package_name, request.version)
         else:  # Ecosystem.PyPI:
             return await fetch_pypi_version(request.package_name)
     except httpx.HTTPStatusError as e:
