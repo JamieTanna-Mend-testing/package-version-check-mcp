@@ -9,4 +9,6 @@ When given a task, follow these guidelines:
 - Always use poetry for dependency management, by invoking `.poetry/bin/poetry` commands (because Poetry is installed into its own venv at `.poetry`)
 - When you add a **dev** dependency, use `.poetry/bin/poetry add --optional=dev <package>==<latest-version-via-package-version-check-mcp>`
 - Use Context7 MCP with the "FastMCP" library documentation for reference
+- When creating integration tests, prefer extending existing (parametrized) tests over creating new ones
+- When running tests, prefer the VSCode tool `runTests` over direct terminal commands
 - Read README.md to understand project setup and scope
