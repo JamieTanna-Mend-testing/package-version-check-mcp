@@ -52,7 +52,7 @@ async def test_get_latest_versions_success(mcp_client: Client, ecosystem, packag
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
     assert len(response.result) == 1
-    assert response.result[0].ecosystem == ecosystem.value
+    assert response.result[0].ecosystem is ecosystem
     assert response.result[0].package_name == package_name
     assert "." in response.result[0].latest_version
 
@@ -93,7 +93,7 @@ async def test_get_latest_versions_not_found(mcp_client: Client, ecosystem, pack
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
     assert len(response.result) == 0
     assert len(response.lookup_errors) == 1
-    assert response.lookup_errors[0].ecosystem == ecosystem.value
+    assert response.lookup_errors[0].ecosystem is ecosystem
     assert response.lookup_errors[0].package_name == package_name
     # Different registries return different errors (404 Not Found, 403 Forbidden, etc.)
     error_lower = response.lookup_errors[0].error.lower()
@@ -119,9 +119,9 @@ async def test_get_latest_versions_mixed_success_and_failure(mcp_client: Client)
     # Should have 2 successful results
     assert len(response.result) == 2
     assert response.result[0].package_name == "express"
-    assert response.result[0].ecosystem == "npm"
+    assert response.result[0].ecosystem is Ecosystem.NPM
     assert response.result[1].package_name == "requests"
-    assert response.result[1].ecosystem == "pypi"
+    assert response.result[1].ecosystem is Ecosystem.PyPI
 
     # Should have 2 errors
     assert len(response.lookup_errors) == 2
@@ -193,7 +193,7 @@ async def test_get_latest_versions_docker_with_tag_hint(mcp_client: Client, pack
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
     assert len(response.result) == 1
-    assert response.result[0].ecosystem == "docker"
+    assert response.result[0].ecosystem is Ecosystem.Docker
     assert response.result[0].package_name == package_name
     assert "." in response.result[0].latest_version
     # The returned tag should have the same suffix

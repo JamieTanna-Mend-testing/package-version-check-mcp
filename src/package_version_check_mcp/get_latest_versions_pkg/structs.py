@@ -28,7 +28,7 @@ class PackageVersionRequest(BaseModel):
 class PackageVersionResult(BaseModel):
     """Successful package version lookup result."""
 
-    ecosystem: str
+    ecosystem: Ecosystem
     package_name: str
     latest_version: str
     digest: Optional[str] = None
@@ -38,7 +38,7 @@ class PackageVersionResult(BaseModel):
 class PackageVersionError(BaseModel):
     """Error during package version lookup."""
 
-    ecosystem: str
+    ecosystem: Ecosystem
     package_name: str
     error: str
 

@@ -55,7 +55,7 @@ async def fetch_pypi_version(package_name: str) -> PackageVersionResult:
                 digest = f"sha256:{first_file['digests']['sha256']}"
 
         return PackageVersionResult(
-            ecosystem="pypi",
+            ecosystem=Ecosystem.PyPI,
             package_name=package_name,
             latest_version=version,
             digest=digest,
@@ -136,7 +136,7 @@ async def fetch_npm_version(package_name: str) -> PackageVersionResult:
             published_on = data["time"][version]
 
         return PackageVersionResult(
-            ecosystem="npm",
+            ecosystem=Ecosystem.NPM,
             package_name=package_name,
             latest_version=version,
             digest=None,  # NPM doesn't provide digest in the same way
@@ -189,7 +189,7 @@ async def fetch_nuget_version(package_name: str) -> PackageVersionResult:
         latest = all_versions[-1]
 
         return PackageVersionResult(
-            ecosystem="nuget",
+            ecosystem=Ecosystem.NuGet,
             package_name=package_name,
             latest_version=latest["version"],
             digest=None,  # NuGet doesn't provide digest in the registration API
@@ -309,7 +309,7 @@ async def fetch_maven_gradle_version(package_name: str) -> PackageVersionResult:
             version = release.text
 
         return PackageVersionResult(
-            ecosystem="maven_gradle",
+            ecosystem=Ecosystem.MavenGradle,
             package_name=package_name,
             latest_version=version,
             digest=None,  # Not reliably available from maven-metadata.xml
@@ -364,7 +364,7 @@ async def fetch_docker_version(
             digest = None
 
         return PackageVersionResult(
-            ecosystem="docker",
+            ecosystem=Ecosystem.Docker,
             package_name=package_name,
             latest_version=latest_tag,
             digest=digest,
@@ -718,7 +718,7 @@ async def fetch_helm_chartmuseum_version(
             raise Exception(f"No non-deprecated stable versions found for chart '{chart_name}'")
 
         return PackageVersionResult(
-            ecosystem="helm",
+            ecosystem=Ecosystem.Helm,
             package_name=original_package_name,
             latest_version=latest_version,
             digest=latest_digest,
@@ -784,7 +784,7 @@ async def fetch_helm_oci_version(
             digest = None
 
         return PackageVersionResult(
-            ecosystem="helm",
+            ecosystem=Ecosystem.Helm,
             package_name=original_package_name,
             latest_version=latest_tag,
             digest=digest,
@@ -992,7 +992,7 @@ async def _fetch_terraform_registry_version(
         latest_version = stable_versions[0]
 
         return PackageVersionResult(
-            ecosystem=ecosystem.value,
+            ecosystem=ecosystem,
             package_name=package_name,
             latest_version=latest_version,
             digest=None,  # Terraform registry doesn't provide a single digest at version level
