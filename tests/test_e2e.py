@@ -61,8 +61,18 @@ def docker_container_base_url() -> Generator[str, None, None]:
             if i < max_retries - 1:
                 time.sleep(retry_delay)
         else:
-            logs = container.get_logs()[0].decode('utf-8')
-            pytest.fail(f"Container did not become healthy in time. Logs:\n{logs}")
+            # Container did not become healthy - print logs for debugging
+            stdout_logs = container.get_logs()[0].decode('utf-8')
+            stderr_logs = container.get_logs()[1].decode('utf-8')
+
+            logger.error("Container failed to become healthy. Stdout logs:\n%s", stdout_logs)
+            logger.error("Container stderr logs:\n%s", stderr_logs)
+
+            pytest.fail(
+                f"Container did not become healthy in time.\n\n"
+                f"=== STDOUT ===\n{stdout_logs}\n\n"
+                f"=== STDERR ===\n{stderr_logs}"
+            )
 
         yield base_url
 

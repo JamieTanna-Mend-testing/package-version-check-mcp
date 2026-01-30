@@ -1,5 +1,10 @@
 import pytest
-from package_version_check_mcp.get_latest_versions_pkg.functions import determine_latest_image_tag, parse_maven_package_name, parse_terraform_provider_name, parse_terraform_module_name
+from package_version_check_mcp.get_latest_versions_pkg.fetchers.docker import determine_latest_image_tag
+from package_version_check_mcp.get_latest_versions_pkg.fetchers.maven import parse_maven_package_name
+from package_version_check_mcp.get_latest_versions_pkg.fetchers.terraform import (
+    parse_terraform_provider_name,
+    parse_terraform_module_name,
+)
 
 
 @pytest.mark.parametrize(

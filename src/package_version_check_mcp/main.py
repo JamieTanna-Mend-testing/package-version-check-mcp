@@ -13,8 +13,8 @@ from starlette.responses import JSONResponse
 from package_version_check_mcp.get_github_actions_pkg.functions import fetch_github_action
 from package_version_check_mcp.get_github_actions_pkg.structs import GitHubActionResult, GitHubActionError, \
     GetGitHubActionVersionsResponse
-from package_version_check_mcp.get_latest_versions_pkg.functions import fetch_package_version
-from package_version_check_mcp.get_latest_versions_pkg.structs import Ecosystem, PackageVersionRequest, \
+from package_version_check_mcp.get_latest_versions_pkg import fetch_package_version
+from package_version_check_mcp.get_latest_versions_pkg.structs import PackageVersionRequest, \
     PackageVersionResult, PackageVersionError, GetLatestVersionsResponse
 
 mcp = FastMCP("Package Version Check")
