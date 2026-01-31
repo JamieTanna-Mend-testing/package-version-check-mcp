@@ -2,7 +2,7 @@
 
 A MCP server that returns the current, up-to-date version of packages you use as dependencies in a variety of ecosystems, such as Python, NPM, Go, or GitHub Actions.
 
-It also supports looking up the latest versions of almost 1000 tools, such as **development runtimes** like `python`, `node`, `dotnet`, **development tools** like `gradle`, and various **DevOps tools** like `kubectl` or `terraform`, via the [mise-en-place](https://github.com/mshekow/mise-en-place) tool.
+It also supports looking up the latest versions of almost 1000 tools, such as **development runtimes** like `python`, `node`, `dotnet`, **development tools** like `gradle`, and various **DevOps tools** like `kubectl` or `terraform`, via the [mise-en-place](https://mise.jdx.dev/) tool.
 
 ## Features
 
