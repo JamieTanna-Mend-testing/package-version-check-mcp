@@ -2,10 +2,14 @@
 
 import re
 from typing import Optional
+from packaging.version import Version, InvalidVersion
 
 
 def parse_semver(version: str) -> tuple[list[int], str]:
     """Parse a semantic version into numeric parts and prerelease suffix.
+
+    Uses the standard packaging.version.Version for parsing. Invalid versions
+    are marked with "invalid" prerelease so they get filtered out.
 
     Args:
         version: The version string to parse (e.g., "1.2.3", "v2.0.0-beta.1")
@@ -13,32 +17,23 @@ def parse_semver(version: str) -> tuple[list[int], str]:
     Returns:
         A tuple of (numeric_parts, prerelease) where:
         - numeric_parts: List of integers from the version (e.g., [1, 2, 3])
-        - prerelease: The prerelease suffix if any (e.g., "beta.1"), empty string otherwise
+        - prerelease: Empty string for stable versions, "prerelease" for prereleases,
+                     or "invalid" for unparseable versions
     """
-    # Remove leading 'v' if present
-    v = version.lstrip('v')
-
-    # Split on '-' to separate version from prerelease
-    parts = v.split('-', 1)
-    version_str = parts[0]
-    prerelease = parts[1] if len(parts) > 1 else ''
-
-    # Parse numeric parts
-    numeric_parts = []
-    for part in version_str.split('.'):
-        try:
-            numeric_parts.append(int(part))
-        except ValueError:
-            # Handle non-numeric parts
-            numeric_parts.append(0)
-
-    return numeric_parts, prerelease
+    try:
+        parsed = Version(version)
+        numeric_parts = list(parsed.release)
+        prerelease = "" if not parsed.is_prerelease else "prerelease"
+        return numeric_parts, prerelease
+    except InvalidVersion:
+        # Invalid versions are treated as prereleases so they get filtered out
+        return [], "invalid"
 
 
 def compare_semver(version1: str, version2: str) -> int:
     """Compare two semantic version strings.
 
-    Assumes stable versions only (no prerelease comparison).
+    Uses the standard packaging.version.Version for comparison.
 
     Args:
         version1: First version string
@@ -49,22 +44,18 @@ def compare_semver(version1: str, version2: str) -> int:
         0 if version1 == version2
         1 if version1 > version2
     """
-    v1_parts, _ = parse_semver(version1)
-    v2_parts, _ = parse_semver(version2)
+    try:
+        v1 = Version(version1)
+        v2 = Version(version2)
 
-    # Pad to same length
-    max_len = max(len(v1_parts), len(v2_parts))
-    v1_parts.extend([0] * (max_len - len(v1_parts)))
-    v2_parts.extend([0] * (max_len - len(v2_parts)))
-
-    # Compare numeric parts
-    for p1, p2 in zip(v1_parts, v2_parts):
-        if p1 < p2:
+        if v1 < v2:
             return -1
-        if p1 > p2:
+        elif v1 > v2:
             return 1
-
-    return 0
+        return 0
+    except InvalidVersion:
+        # If either version is invalid, treat as equal
+        return 0
 
 
 def parse_docker_tag(tag: str) -> Optional[dict]:

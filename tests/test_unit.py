@@ -527,3 +527,91 @@ def test_check_php_constraint(php_constraint, target_php_version, expected_resul
     """Test check_php_constraint with various constraint formats."""
     result = check_php_constraint(php_constraint, target_php_version)
     assert result == expected_result, f"Failed: {test_description}"
+
+
+# ============================================================================
+# Version parser tests (parse_semver and compare_semver)
+# ============================================================================
+
+from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser import parse_semver, compare_semver
+
+
+@pytest.mark.parametrize(
+    "version,expected_numeric,expected_prerelease,test_description",
+    [
+        # Standard versions
+        ("1.2.3", [1, 2, 3], "", "Standard three-part version"),
+        ("2.0.0", [2, 0, 0], "", "Major version 2"),
+        ("10.20.30", [10, 20, 30], "", "Large version numbers"),
+        ("1.0", [1, 0], "", "Two-part version"),
+        ("5", [5], "", "Single-part version"),
+
+        # Versions with 'v' prefix
+        ("v1.2.3", [1, 2, 3], "", "Version with v prefix"),
+        ("v2.0.0", [2, 0, 0], "", "Major version with v prefix"),
+
+        # Prerelease versions
+        ("1.0.0-beta", [1, 0, 0], "prerelease", "Version with beta prerelease"),
+        ("2.0.0rc1", [2, 0, 0], "prerelease", "Version with rc prerelease"),
+        ("3.1.0a1", [3, 1, 0], "prerelease", "Version with alpha prerelease"),
+        ("1.2.3b2", [1, 2, 3], "prerelease", "Version with beta number"),
+        ("8.5.2RC1", [8, 5, 2], "prerelease", "PHP-style RC version"),
+
+        # Invalid versions (should return empty list and 'invalid')
+        ("4.0b3_RC2", [], "invalid", "Invalid version with underscore"),
+        ("invalid", [], "invalid", "Completely invalid version string"),
+        ("zulu-1.2.3", [], "invalid", "Completely invalid version string"),
+        ("", [], "invalid", "Empty version string"),
+    ],
+)
+def test_parse_semver(version, expected_numeric, expected_prerelease, test_description):
+    """Test parse_semver with various version formats."""
+    numeric_parts, prerelease = parse_semver(version)
+    assert numeric_parts == expected_numeric, f"Failed numeric parts: {test_description}"
+    assert prerelease == expected_prerelease, f"Failed prerelease: {test_description}"
+
+
+@pytest.mark.parametrize(
+    "version1,version2,expected_result,test_description",
+    [
+        # Equal versions
+        ("1.2.3", "1.2.3", 0, "Equal versions"),
+        ("v1.2.3", "1.2.3", 0, "Equal versions with v prefix on first"),
+        ("2.0.0", "v2.0.0", 0, "Equal versions with v prefix on second"),
+        ("2.0.0", "v2.0", 0, "Equal versions with v prefix on second"),
+
+        # Less than
+        ("1.2.3", "1.2.4", -1, "Patch version less"),
+        ("1.2.3", "1.3.0", -1, "Minor version less"),
+        ("1.2.3", "2.0.0", -1, "Major version less"),
+        ("1.0", "1.0.1", -1, "Two-part vs three-part (less)"),
+        ("0.9.9", "1.0.0", -1, "Pre-1.0 version less"),
+
+        # Greater than
+        ("1.2.4", "1.2.3", 1, "Patch version greater"),
+        ("1.3.0", "1.2.3", 1, "Minor version greater"),
+        ("2.0.0", "1.2.3", 1, "Major version greater"),
+        ("1.0.1", "1.0", 1, "Three-part vs two-part (greater)"),
+        ("10.0.0", "9.9.9", 1, "Double-digit major version"),
+
+        # Prerelease handling
+        ("1.0.0rc1", "1.0.0", -1, "Prerelease less than stable"),
+        ("1.0.0", "1.0.0rc1", 1, "Stable greater than prerelease"),
+        ("2.0.0-beta", "2.0.0", -1, "Beta less than stable"),
+        ("1.0.0a1", "1.0.0b1", -1, "Alpha less than beta"),
+
+        # Different number of parts
+        ("1.2", "1.2.0", 0, "Two-part equals three-part with zero"),
+        ("1", "1.0.0", 0, "One-part equals three-part with zeros"),
+
+        # Invalid versions (should return 0 - equal)
+        ("invalid", "1.2.3", 0, "Invalid first version"),
+        ("1.2.3", "invalid", 0, "Invalid second version"),
+        ("invalid", "invalid", 0, "Both invalid versions"),
+        ("4.0b3_RC2", "1.2.3", 0, "Non-standard version format"),
+    ],
+)
+def test_compare_semver(version1, version2, expected_result, test_description):
+    """Test compare_semver with various version comparisons."""
+    result = compare_semver(version1, version2)
+    assert result == expected_result, f"Failed: {test_description} (got {result}, expected {expected_result})"
