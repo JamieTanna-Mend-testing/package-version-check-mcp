@@ -8,6 +8,7 @@ from package_version_check_mcp.main import (
 )
 from package_version_check_mcp.get_latest_versions_pkg.structs import Ecosystem, PackageVersionRequest, \
     GetLatestVersionsResponse
+from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser import compare_semver
 
 
 @pytest.fixture
@@ -17,33 +18,34 @@ async def mcp_client():
         yield client
 
 
-@pytest.mark.parametrize("ecosystem,package_name", [
-    (Ecosystem.NPM, "express"),
-    (Ecosystem.PyPI, "requests"),
-    (Ecosystem.Docker, "index.docker.io/library/busybox"),
-    (Ecosystem.NuGet, "Newtonsoft.Json"),
-    (Ecosystem.MavenGradle, "org.springframework:spring-core"),
-    (Ecosystem.MavenGradle, "com.google.guava:guava"),
-    (Ecosystem.MavenGradle, "org.apache.commons:commons-lang3"),
-    (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/nginx"),
-    (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/redis"),
-    (Ecosystem.Helm, "https://prometheus-community.github.io/helm-charts/prometheus"),
-    (Ecosystem.Helm, "oci://ghcr.io/argoproj/argo-helm/argo-cd"),
-    (Ecosystem.Helm, "oci://registry-1.docker.io/bitnamicharts/nginx"),
-    (Ecosystem.TerraformProvider, "hashicorp/aws"),
-    (Ecosystem.TerraformProvider, "hashicorp/google"),
-    (Ecosystem.TerraformProvider, "registry.terraform.io/hashicorp/azurerm"),
-    (Ecosystem.TerraformProvider, "registry.opentofu.org/hashicorp/random"),
-    (Ecosystem.TerraformModule, "terraform-aws-modules/vpc/aws"),
-    (Ecosystem.TerraformModule, "terraform-aws-modules/eks/aws"),
-    (Ecosystem.TerraformModule, "registry.terraform.io/Azure/network/azurerm"),
-    (Ecosystem.Go, "github.com/gin-gonic/gin"),
-    (Ecosystem.Go, "github.com/google/uuid"),
-    (Ecosystem.PHP, "monolog/monolog"),
-    (Ecosystem.PHP, "laravel/framework"),
-    (Ecosystem.PHP, "symfony/console"),
+@pytest.mark.parametrize("ecosystem,package_name,minimum_expected_version", [
+    (Ecosystem.NPM, "express", "5.2.1"),
+    (Ecosystem.PyPI, "requests", "2.32.5"),
+    (Ecosystem.Docker, "index.docker.io/library/busybox", "1.37.0"),
+    (Ecosystem.NuGet, "Newtonsoft.Json", "13.0.4"),
+    (Ecosystem.MavenGradle, "org.springframework:spring-core", "7.0.3"),
+    (Ecosystem.MavenGradle, "com.google.guava:guava", "33.5.0-jre"),
+    (Ecosystem.MavenGradle, "org.apache.commons:commons-lang3", "3.20.0"),
+    (Ecosystem.MavenGradle, "org.springframework.boot:spring-boot-starter-parent", "4.1.0-M1"),
+    (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/nginx", "22.4.3"),
+    (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/redis", "24.1.2"),
+    (Ecosystem.Helm, "https://prometheus-community.github.io/helm-charts/prometheus", "28.7.0"),
+    (Ecosystem.Helm, "oci://ghcr.io/argoproj/argo-helm/argo-cd", "9.3.7"),
+    (Ecosystem.Helm, "oci://registry-1.docker.io/bitnamicharts/nginx", "22.4.3"),
+    (Ecosystem.TerraformProvider, "hashicorp/aws", "6.30.0"),
+    (Ecosystem.TerraformProvider, "hashicorp/google", "7.17.0"),
+    (Ecosystem.TerraformProvider, "registry.terraform.io/hashicorp/azurerm", "4.58.0"),
+    (Ecosystem.TerraformProvider, "registry.opentofu.org/hashicorp/random", "3.8.1"),
+    (Ecosystem.TerraformModule, "terraform-aws-modules/vpc/aws", "6.6.0"),
+    (Ecosystem.TerraformModule, "terraform-aws-modules/eks/aws", "21.15.1"),
+    (Ecosystem.TerraformModule, "registry.terraform.io/Azure/network/azurerm", "5.3.0"),
+    (Ecosystem.Go, "github.com/gin-gonic/gin", "v1.11.0"),
+    (Ecosystem.Go, "github.com/google/uuid", "v1.6.0"),
+    (Ecosystem.PHP, "monolog/monolog", "3.10.0"),
+    (Ecosystem.PHP, "laravel/framework", "v12.49.0"),
+    (Ecosystem.PHP, "symfony/console", "v8.0.4"),
 ])
-async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem, package_name):
+async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem, package_name, minimum_expected_version):
     """Test fetching valid package versions from different ecosystems."""
     result = await mcp_client.call_tool(
         name="get_latest_package_versions",
@@ -60,6 +62,18 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
     assert response.result[0].ecosystem is ecosystem
     assert response.result[0].package_name == package_name
     assert "." in response.result[0].latest_version
+
+    # TODO: in the future, we need to improve the version comparison, especially for Maven/Gradle
+    # where we have these special cases like "33.5.0-jre" or "4.1.0-M1". It might make sense to
+    # create a fork of packaging.version.Version that can handle these suffixes as "variants".
+    # Once that is done, we could also get rid of compare_semver() (which handles invalid
+    # versions gracefully by returning 0) and use something like "v1 < v2" directly.
+    # In the JavaGradle parser, we would then no longer rely on the value in <release> but parse
+    # the full <versions> list.
+
+    # Verify the version is at least the minimum expected version
+    assert compare_semver(response.result[0].latest_version, minimum_expected_version) >= 0, \
+        f"Expected version >= {minimum_expected_version}, got {response.result[0].latest_version}"
 
     if ecosystem is Ecosystem.Docker:
         assert response.result[0].digest is not None
