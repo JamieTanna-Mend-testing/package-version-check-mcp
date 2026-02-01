@@ -46,6 +46,10 @@ uvx package-version-check-mcp --mode=stdio
 
 This automatically installs and runs the latest version from PyPI.
 
+**Requirements:**
+- You need the `yq` binary on PATH if you want to call tool `get_latest_package_versions` for the "helm" ecosystem
+- You need the `mise` binary on PATH if you want to call the tools `get_supported_tools` or `get_latest_tool_versions`
+
 **Optional but recommended:** Set the `GITHUB_PAT` environment variable to a GitHub Personal Access Token (no scopes required) to avoid GitHub API rate limits.
 
 #### Option 3: Run with Docker (for local use)
