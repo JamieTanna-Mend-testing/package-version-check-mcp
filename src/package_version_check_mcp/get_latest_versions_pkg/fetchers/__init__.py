@@ -10,6 +10,7 @@ from .terraform import fetch_terraform_provider_version, fetch_terraform_module_
 from .go import fetch_go_version
 from .php import fetch_php_version
 from .rubygems import fetch_rubygems_version
+from .rust import fetch_rust_version
 
 __all__ = [
     "fetch_npm_version",
@@ -23,4 +24,5 @@ __all__ = [
     "fetch_go_version",
     "fetch_php_version",
     "fetch_rubygems_version",
+    "fetch_rust_version",
 ]

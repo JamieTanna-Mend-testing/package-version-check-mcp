@@ -18,6 +18,7 @@ class Ecosystem(str, Enum):
     Go = "go"
     PHP = "php"
     RubyGems = "rubygems"
+    Rust = "rust"
 
 
 class PackageVersionRequest(BaseModel):
