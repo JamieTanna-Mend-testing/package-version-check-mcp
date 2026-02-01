@@ -14,6 +14,7 @@ Supported ecosystems / tools:
   - **Maven / Gradle** - Java/Kotlin/Scala packages from Maven repositories (Maven Central, Google Maven, etc.)
   - **Go** - Go modules from proxy.golang.org
   - **PHP** - PHP packages from Packagist (used by Composer)
+  - **RubyGems** - Ruby gems from rubygems.org
 - DevOps ecosystems:
   - **Docker** - Docker container images from Docker registries
   - **Helm** - Helm charts from ChartMuseum repositories and OCI registries
@@ -82,7 +83,7 @@ Fetches the latest versions of packages from various ecosystems.
 
 **Input:**
 - `packages`: Array of package specifications, where each item contains:
-  - `ecosystem` (required): Either "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", or "php"
+  - `ecosystem` (required): Either "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", "php", or "rubygems"
   - `package_name` (required): The name of the package
     - For npm: package name (e.g., "express")
     - For pypi: package name (e.g., "requests")
@@ -94,11 +95,12 @@ Fetches the latest versions of packages from various ecosystems.
     - For terraform_module: "[registry/]<namespace>/<name>/<provider>" format (e.g., "terraform-aws-modules/vpc/aws" or "registry.terraform.io/terraform-aws-modules/vpc/aws"). If registry is omitted, registry.terraform.io is assumed. Supports alternative registries like registry.opentofu.org.
     - For go: Absolute module identifier (e.g., "github.com/gin-gonic/gin")
     - For php: Package name in "vendor/package" format (e.g., "monolog/monolog", "laravel/framework")
+    - For rubygems: Gem name (e.g., "rails", "devise")
   - `version_hint` (optional):
     - For docker: tag compatibility hint (e.g., "1.36-alpine") to find the latest tag matching the same suffix pattern. If omitted, returns the latest semantic version tag.
     - For helm (OCI only): tag compatibility hint similar to Docker
     - For php: PHP version hint (e.g., "php:8.1" or "8.2") to filter packages compatible with that PHP version. If omitted, returns the latest stable version regardless of PHP compatibility.
-    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go: not currently used
+    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/rubygems: not currently used
 
 **Output:**
 - `result`: Array of successful lookups with:
@@ -127,7 +129,8 @@ Fetches the latest versions of packages from various ecosystems.
     {"ecosystem": "terraform_module", "package_name": "terraform-aws-modules/vpc/aws"},
     {"ecosystem": "go", "package_name": "github.com/gin-gonic/gin"},
     {"ecosystem": "php", "package_name": "monolog/monolog"},
-    {"ecosystem": "php", "package_name": "laravel/framework", "version": "php:8.1"}
+    {"ecosystem": "php", "package_name": "laravel/framework", "version": "php:8.1"},
+    {"ecosystem": "rubygems", "package_name": "rails"}
   ]
 }
 ```
