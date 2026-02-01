@@ -29,21 +29,25 @@ async def test_get_github_action_versions_readme(mcp_client: Client, include_rea
 
     assert result.structured_content is not None
     response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
-    assert len(response.lookup_errors) == 0
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
     action_data = response.result[0]
     assert action_data.name == "actions/checkout"
-    assert action_data.latest_version.startswith("v")  # Should be like "v4.2.1"
+    assert action_data.latest_version.startswith("v"), f"Version should start with 'v': {action_data.latest_version}"
     assert action_data.digest is not None
-    assert len(action_data.digest) == 40  # SHA-1 hash is 40 hex characters
-    assert "inputs" in action_data.metadata
-    assert "runs" in action_data.metadata
+    assert len(action_data.digest) == 40, f"Digest should be 40 chars (SHA-1): {action_data.digest}"
+    assert "inputs" in action_data.metadata, f"Metadata keys: {action_data.metadata.keys()}"
+    assert "runs" in action_data.metadata, f"Metadata keys: {action_data.metadata.keys()}"
 
     if include_readme:
         assert action_data.readme is not None
         assert len(action_data.readme) > 0
-        assert "checkout" in action_data.readme.lower()
+        assert "checkout" in action_data.readme.lower(), \
+            f"'checkout' not in readme: {action_data.readme[:100]}..."
     else:
         assert action_data.readme is None
 
@@ -65,17 +69,21 @@ async def test_get_github_action_versions_multiple(mcp_client: Client, action_na
 
     assert result.structured_content is not None
     response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == len(action_names)
-    assert len(response.lookup_errors) == 0
+    assert len(response.result) == len(action_names), \
+        f"Expected {len(action_names)} results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
     names = {action.name for action in response.result}
-    assert names == set(action_names)
+    assert names == set(action_names), f"Got action names: {names}"
 
     for action_data in response.result:
-        assert action_data.latest_version.startswith("v")
+        assert action_data.latest_version.startswith("v"), \
+            f"Version should start with 'v' ({action_data.name}): {action_data.latest_version}"
         assert action_data.digest is not None
-        assert len(action_data.digest) == 40  # SHA-1 hash is 40 hex characters
-        assert "runs" in action_data.metadata
+        assert len(action_data.digest) == 40, f"Digest should be 40 chars ({action_data.name}): {action_data.digest}"
+        assert "runs" in action_data.metadata, f"Metadata keys ({action_data.name}): {action_data.metadata.keys()}"
 
 
 @pytest.mark.parametrize("action_name,error_substring", [
@@ -94,12 +102,16 @@ async def test_get_github_action_versions_errors(mcp_client: Client, action_name
 
     assert result.structured_content is not None
     response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 0
-    assert len(response.lookup_errors) == 1
+    assert len(response.result) == 0, \
+        f"Expected 0 results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 1, \
+        f"Expected 1 error, got {len(response.lookup_errors)}: {response.lookup_errors}. " \
+        f"Results: {response.result}"
 
     error = response.lookup_errors[0]
     assert error.name == action_name
-    assert error_substring in error.error.lower()
+    assert error_substring in error.error.lower(), f"Expected '{error_substring}' in error: {error.error}"
 
 
 async def test_get_github_action_versions_mixed(mcp_client: Client):
@@ -114,8 +126,11 @@ async def test_get_github_action_versions_mixed(mcp_client: Client):
 
     assert result.structured_content is not None
     response = GetGitHubActionVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
-    assert len(response.lookup_errors) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 1, \
+        f"Expected 1 error, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
     assert response.result[0].name == "actions/checkout"
     assert response.lookup_errors[0].name == "nonexistent/action"

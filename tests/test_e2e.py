@@ -105,15 +105,19 @@ async def test_get_latest_package_versions_npm_success_e2e(mcp_client: Client):
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].ecosystem == "npm"
     assert response.result[0].package_name == "express"
     assert response.result[0].latest_version != ""
     # Express should have a version like "4.x.x" or "5.x.x"
-    assert "." in response.result[0].latest_version
+    assert "." in response.result[0].latest_version, \
+        f"Version missing '.': {response.result[0].latest_version}"
     # Should have a publication date
     assert response.result[0].published_on is not None
-    assert len(response.lookup_errors) == 0
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
 async def test_get_latest_helm_chart_version_e2e(mcp_client: Client):
@@ -127,20 +131,27 @@ async def test_get_latest_helm_chart_version_e2e(mcp_client: Client):
         name="get_latest_package_versions",
         arguments={
             "packages": [
-                PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="https://charts.bitnami.com/bitnami/nginx")
+                PackageVersionRequest(
+                    ecosystem=Ecosystem.Helm,
+                    package_name="https://charts.bitnami.com/bitnami/nginx"
+                )
             ]
         }
     )
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].ecosystem == "helm"
     assert response.result[0].package_name == "https://charts.bitnami.com/bitnami/nginx"
     assert response.result[0].latest_version != ""
     # Helm charts should have semantic versions like "1.2.3"
-    assert "." in response.result[0].latest_version
-    assert len(response.lookup_errors) == 0
+    assert "." in response.result[0].latest_version, \
+        f"Version missing '.': {response.result[0].latest_version}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
 async def test_get_supported_tools_e2e(mcp_client: Client):
@@ -156,13 +167,13 @@ async def test_get_supported_tools_e2e(mcp_client: Client):
 
     assert result.structured_content is not None
     tools = result.structured_content.get("result", result.structured_content)
-    assert isinstance(tools, list)
-    assert len(tools) > 800
+    assert isinstance(tools, list), f"Got type: {type(tools)}"
+    assert len(tools) > 800, f"Got {len(tools)} tools"
     # All entries should be strings
-    assert all(isinstance(tool, str) for tool in tools)
+    assert all(isinstance(tool, str) for tool in tools), f"Got types: {set(type(t) for t in tools)}"
     # Check for some well-known tools that should be in the registry
-    assert "node" in tools
-    assert "python" in tools
+    assert "node" in tools, f"First 10 tools: {tools[:10]}"
+    assert "python" in tools, f"First 10 tools: {tools[:10]}"
 
 
 async def test_get_latest_tool_versions_php_e2e(mcp_client: Client):
@@ -182,12 +193,17 @@ async def test_get_latest_tool_versions_php_e2e(mcp_client: Client):
     assert result.structured_content is not None
     from package_version_check_mcp.get_latest_tools_pkg.structs import GetLatestToolVersionsResponse
     response = GetLatestToolVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].tool_name == "php"
     assert response.result[0].latest_version != ""
     # PHP should have a version like "8.x.x"
-    assert "." in response.result[0].latest_version
+    assert "." in response.result[0].latest_version, \
+        f"Version missing '.': {response.result[0].latest_version}"
     # Ensure it's a numeric version (not vendor-specific like "zulu-8.72.0.17")
-    assert response.result[0].latest_version[0].isdigit()
-    assert len(response.lookup_errors) == 0
+    assert response.result[0].latest_version[0].isdigit(), \
+        f"Version should start with digit: {response.result[0].latest_version}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 

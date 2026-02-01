@@ -27,10 +27,10 @@ async def test_get_supported_tools(mcp_client: Client):
     else:
         supported_tools = result.structured_content
 
-    assert isinstance(supported_tools, list)
-    assert len(supported_tools) > 0
+    assert isinstance(supported_tools, list), f"Got type: {type(supported_tools)}"
+    assert len(supported_tools) > 0, f"Got {len(supported_tools)} tools"
 
     # Check that some common tools are in the list
-    assert "terraform" in supported_tools
-    assert "node" in supported_tools
-    assert "python" in supported_tools
+    assert "terraform" in supported_tools, f"First 10 tools: {supported_tools[:10]}"
+    assert "node" in supported_tools, f"First 10 tools: {supported_tools[:10]}"
+    assert "python" in supported_tools, f"First 10 tools: {supported_tools[:10]}"

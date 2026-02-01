@@ -58,10 +58,12 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, f"Expected 1 result, got {len(response.result)}: {response.result}. Errors: {response.lookup_errors}"
     assert response.result[0].ecosystem is ecosystem
     assert response.result[0].package_name == package_name
-    assert "." in response.result[0].latest_version
+    assert "." in response.result[0].latest_version, (
+        f"Expected version to contain '.', got {response.result[0].latest_version}"
+    )
 
     # TODO: in the future, we need to improve the version comparison, especially for Maven/Gradle
     # where we have these special cases like "33.5.0-jre" or "4.1.0-M1". It might make sense to
@@ -77,7 +79,8 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
 
     if ecosystem is Ecosystem.Docker:
         assert response.result[0].digest is not None
-        assert response.result[0].digest.startswith("sha256:")
+        assert response.result[0].digest.startswith("sha256:"), \
+            f"Expected digest to start with 'sha256:', got {response.result[0].digest}"
 
     if ecosystem is Ecosystem.MavenGradle:
         # Maven/Gradle doesn't provide digest or published_on
@@ -93,7 +96,7 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
         assert response.result[0].published_on is not None
         assert response.result[0].digest is None
 
-    assert len(response.lookup_errors) == 0
+    assert len(response.lookup_errors) == 0, f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
 @pytest.mark.parametrize("ecosystem,package_name", [
@@ -121,8 +124,12 @@ async def test_get_latest_package_versions_not_found(mcp_client: Client, ecosyst
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 0
-    assert len(response.lookup_errors) == 1
+    assert len(response.result) == 0, \
+        f"Expected 0 results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 1, \
+        f"Expected 1 error, got {len(response.lookup_errors)}: {response.lookup_errors}. " \
+        f"Results: {response.result}"
     assert response.lookup_errors[0].ecosystem is ecosystem
     assert response.lookup_errors[0].package_name == package_name
     # Different registries return different errors (404 Not Found, 403 Forbidden, etc.)
@@ -147,15 +154,20 @@ async def test_get_latest_package_versions_mixed_success_and_failure(mcp_client:
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
     # Should have 2 successful results
-    assert len(response.result) == 2
+    assert len(response.result) == 2, \
+        f"Expected 2 results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].package_name == "express"
     assert response.result[0].ecosystem is Ecosystem.NPM
     assert response.result[1].package_name == "requests"
     assert response.result[1].ecosystem is Ecosystem.PyPI
 
     # Should have 2 errors
-    assert len(response.lookup_errors) == 2
-    assert all("not found" in err.error.lower() for err in response.lookup_errors)
+    assert len(response.lookup_errors) == 2, \
+        f"Expected 2 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
+    assert all("not found" in err.error.lower() for err in response.lookup_errors), \
+        f"Expected all errors to contain 'not found', got errors: " \
+        f"{[err.error for err in response.lookup_errors]}"
 
 
 async def test_get_latest_package_versions_empty_input(mcp_client: Client):
@@ -167,8 +179,11 @@ async def test_get_latest_package_versions_empty_input(mcp_client: Client):
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 0
-    assert len(response.lookup_errors) == 0
+    assert len(response.result) == 0, \
+        f"Expected 0 results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
 async def test_get_latest_package_versions_multiple_packages(mcp_client: Client):
@@ -187,17 +202,20 @@ async def test_get_latest_package_versions_multiple_packages(mcp_client: Client)
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 4
-    assert len(response.lookup_errors) == 0
+    assert len(response.result) == 4, \
+        f"Expected 4 results, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
     # Verify all packages are present
     package_names = {pkg.package_name for pkg in response.result}
-    assert package_names == {"express", "react", "requests", "flask"}
+    assert package_names == {"express", "react", "requests", "flask"}, f"Got package names: {package_names}"
 
     # Verify all have valid versions
     for pkg in response.result:
         assert pkg.latest_version != ""
-        assert "." in pkg.latest_version
+        assert "." in pkg.latest_version, f"Version missing '.': {pkg.latest_version}"
 
 
 @pytest.mark.parametrize("package_name,version_hint,expected_suffix", [
@@ -205,7 +223,9 @@ async def test_get_latest_package_versions_multiple_packages(mcp_client: Client)
     ("index.docker.io/library/busybox", "1.36-glibc", "glibc"),
     ("index.docker.io/library/memcached", "1-bookworm", "bookworm"),
 ])
-async def test_get_latest_package_versions_docker_with_tag_hint(mcp_client: Client, package_name, version_hint, expected_suffix):
+async def test_get_latest_package_versions_docker_with_tag_hint(
+    mcp_client: Client, package_name, version_hint, expected_suffix
+):
     """Test fetching Docker image versions with tag compatibility hint."""
     result = await mcp_client.call_tool(
         name="get_latest_package_versions",
@@ -222,16 +242,22 @@ async def test_get_latest_package_versions_docker_with_tag_hint(mcp_client: Clie
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].ecosystem is Ecosystem.Docker
     assert response.result[0].package_name == package_name
-    assert "." in response.result[0].latest_version
+    assert "." in response.result[0].latest_version, \
+        f"Version missing '.': {response.result[0].latest_version}"
     # The returned tag should have the same suffix
-    assert expected_suffix in response.result[0].latest_version.lower()
+    assert expected_suffix in response.result[0].latest_version.lower(), \
+        f"Expected '{expected_suffix}' in version: {response.result[0].latest_version}"
     # Should have a digest
     assert response.result[0].digest is not None
-    assert response.result[0].digest.startswith("sha256:")
-    assert len(response.lookup_errors) == 0
+    assert response.result[0].digest.startswith("sha256:"), \
+        f"Digest should start with 'sha256:': {response.result[0].digest}"
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
 @pytest.mark.parametrize("package_name,version_hint", [
@@ -239,7 +265,9 @@ async def test_get_latest_package_versions_docker_with_tag_hint(mcp_client: Clie
     ("monolog/monolog", "8.2"),
     ("symfony/console", "php:8.1"),
 ])
-async def test_get_latest_package_versions_php_with_version_hint(mcp_client: Client, package_name, version_hint):
+async def test_get_latest_package_versions_php_with_version_hint(
+    mcp_client: Client, package_name, version_hint
+):
     """Test fetching PHP package versions with PHP version compatibility hint."""
     result = await mcp_client.call_tool(
         name="get_latest_package_versions",
@@ -256,11 +284,15 @@ async def test_get_latest_package_versions_php_with_version_hint(mcp_client: Cli
 
     assert result.structured_content is not None
     response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1
+    assert len(response.result) == 1, \
+        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
+        f"Errors: {response.lookup_errors}"
     assert response.result[0].ecosystem is Ecosystem.PHP
     assert response.result[0].package_name == package_name
-    assert "." in response.result[0].latest_version
+    assert "." in response.result[0].latest_version, \
+        f"Expected version to contain '.', got {response.result[0].latest_version}"
     # PHP packages should have published_on but no digest
     assert response.result[0].published_on is not None
     assert response.result[0].digest is None
-    assert len(response.lookup_errors) == 0
+    assert len(response.lookup_errors) == 0, \
+        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
