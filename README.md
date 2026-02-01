@@ -57,7 +57,7 @@ This automatically installs and runs the latest version from PyPI.
 
 Use the pre-built Docker image:
 ```bash
-docker run --rm -i ghcr.io/mshekow/package-version-check-mcp:latest --mode=stdio
+docker run --pull=always --rm -i ghcr.io/mshekow/package-version-check-mcp:latest --mode=stdio
 ```
 
 **Optional but recommended:** Pass the `GITHUB_PAT` environment variable using `-e GITHUB_PAT=your_token_here` to avoid GitHub API rate limits.
