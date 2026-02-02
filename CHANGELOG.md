@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-02-02
+
+### Added
+- **Ruby ecosystem support**: `get_latest_package_versions` supports fetching latest Ruby gem versions from rubygems.org
+- **Rust ecosystem support**: `get_latest_package_versions` supports fetching latest Rust crate versions from crates.io
+
 ## [0.0.5] - 2026-01-31
 
 ### Added
