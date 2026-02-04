@@ -22,14 +22,10 @@ RUN /tmp/poetry/bin/poetry install --no-interaction --no-ansi --no-root --only m
 
 COPY src/ ./src/
 
-FROM alpine/curl:latest AS yq-and-mise-downloader
-# Download yq for fast YAML processing (used for Helm ChartMuseum index parsing)
+FROM alpine/curl:latest AS mise-downloader
+# Download mise tool to determine various tool versions
 # Note: TARGETARCH is e.g. arm64 or amd64
 ARG TARGETARCH
-# renovate-docker-env: datasource=github-tags depName=mikefarah/yq
-ENV YQ_VERSION=v4.50.1
-RUN curl -Lo /yq https://github.com/mikefarah/yq/releases/download/$YQ_VERSION/yq_linux_${TARGETARCH} \
-  && chmod +x /yq
 # renovate-docker-env: datasource=github-tags depName=jdx/mise
 ENV MISE_VERSION=v2026.1.12
 RUN apk add --no-cache tar zstd && \
@@ -47,8 +43,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/src"
 
 COPY --from=build-stage /app /app
-COPY --from=yq-and-mise-downloader /yq /usr/bin/yq
-COPY --from=yq-and-mise-downloader /usr/bin/mise /usr/bin/mise
+COPY --from=mise-downloader /usr/bin/mise /usr/bin/mise
 
 COPY --from=lprobe --link /build/lprobe /bin/lprobe
 HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \

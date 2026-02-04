@@ -40,7 +40,7 @@ def docker_container_base_url() -> Generator[str, None, None]:
     )
     logger.info("Docker image built successfully: %s", image_tag)
 
-    with DockerContainer(image_tag).with_exposed_ports(port) as container:
+    with DockerContainer(image_tag).with_exposed_ports(port).with_kwargs(mem_limit="512m") as container:
         logger.info("Docker container started: %s", container.get_container_host_ip())
 
         # Wait for the container to be healthy
@@ -124,8 +124,8 @@ async def test_get_latest_helm_chart_version_e2e(mcp_client: Client):
     """
     Fetch a valid Helm chart version from the MCP server running in Docker.
 
-    This verifies that the yq binary is properly installed and accessible within
-    the Docker image for parsing large Helm index.yaml files.
+    This verifies that downloading and parsing large Helm index.yaml files (writing
+    temporary files to disk) works as expected within the Docker image.
     """
     result = await mcp_client.call_tool(
         name="get_latest_package_versions",

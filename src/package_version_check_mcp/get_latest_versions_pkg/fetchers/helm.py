@@ -1,13 +1,13 @@
 """Helm chart version fetcher."""
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import urllib.parse
 import httpx
 import tempfile
 import os
 import asyncio
-import json
-import functools
+import yaml
+import textwrap
 
 from docker_registry_client_async import DockerRegistryClientAsync, ImageName
 
@@ -123,7 +123,7 @@ async def fetch_helm_chartmuseum_version(
 ) -> PackageVersionResult:
     """Fetch the latest version of a Helm chart from a ChartMuseum-compatible registry.
 
-    Uses yq (fast Go-based YAML processor) to extract only the needed chart from large index.yaml files.
+    Uses a memory-efficient streaming YAML parser to extract only the needed chart from large index.yaml files.
 
     Args:
         registry_url: The base URL of the ChartMuseum registry
@@ -143,7 +143,7 @@ async def fetch_helm_chartmuseum_version(
     # into memory
     temp_file = None
     try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             async with client.stream('GET', index_url) as response:
                 response.raise_for_status()
 
@@ -153,8 +153,10 @@ async def fetch_helm_chartmuseum_version(
                     temp_file.write(chunk)
                 temp_file.close()
 
-        # Use yq to extract only the specific chart (much faster than parsing entire YAML)
-        chart_versions = await _extract_helm_chart_with_yq(temp_file.name, chart_name)
+        # Run the CPU-bound YAML parsing in a separate thread
+        chart_versions = await asyncio.to_thread(
+            _extract_helm_chart_versions_memory_efficient, temp_file.name, chart_name
+        )
 
         if not chart_versions:
             raise Exception(f"Chart '{chart_name}' not found in repository at {registry_url}")
@@ -262,48 +264,135 @@ async def fetch_helm_oci_version(
         )
 
 
-async def _extract_helm_chart_with_yq(yaml_file_path: str, chart_name: str) -> list[dict]:
-    """Extract a specific chart's versions from Helm index.yaml using yq (fast Go-based tool).
-
-    This avoids parsing the entire YAML file (which can be 20MB+) by using yq to extract
-    only the specific chart we need.
+def _extract_helm_chart_versions_memory_efficient(yaml_path: str, chart_name: str) -> List[Dict[str, Any]]:
+    """
+    Parses a specific entry of a Helm index.yaml file memory-efficiently.
 
     Args:
-        yaml_file_path: Path to the index.yaml file on disk
-        chart_name: The name of the chart to extract
+        yaml_path (str): Path to the index.yaml file.
+        chart_name (str): The name of the chart to extract.
 
     Returns:
-        List of version dictionaries for the chart
+        list: A list of dicts containing version info, or empty list if not found.
     """
+    start_line = -1
+    end_line = -1
+
+    # Try using CSafeLoader for speed if available, otherwise fallback to SafeLoader
     try:
-        # Use yq to extract just the chart we need and output as JSON
-        # yq syntax: .entries["chart-name"] -o json
-        process = await asyncio.create_subprocess_exec(
-            'yq',
-            f'.entries["{chart_name}"]',
-            '-o', 'json',
-            yaml_file_path,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        Loader = yaml.CSafeLoader
+    except AttributeError:
+        Loader = yaml.SafeLoader
 
-        stdout, _stderr = await process.communicate()
+    # 1. First pass: Parse events to find coordinates
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            events = yaml.parse(f, Loader=Loader)
 
-        if process.returncode != 0:
-            # yq not found or error - return empty list
-            return []
+            # State machine states
+            STATE_SEARCH_ENTRIES = 0  # searching for 'entries' key
+            STATE_WAIT_ENTRIES_VAL = 1  # waiting for entries mapping start
+            STATE_SEARCH_CHART = 2  # searching for chart name key
+            STATE_WAIT_CHART_VAL = 3  # waiting for chart's versions sequence to start
+            STATE_CAPTURE_VALUE = 4  # capturing a specific version's dict
 
-        # Parse the JSON output
-        result = json.loads(stdout.decode())
+            state = STATE_SEARCH_ENTRIES
+            depth = 0
 
-        # yq returns null if the key doesn't exist
-        if result is None:
-            return []
+            entries_depth = -1
+            target_seq_depth = -1
 
-        return result if isinstance(result, list) else []
+            for event in events:
+                # Track depth changes for Mapping and Sequence
+                if isinstance(event, (yaml.MappingStartEvent, yaml.SequenceStartEvent)):
+                    depth += 1
+                elif isinstance(event, (yaml.MappingEndEvent, yaml.SequenceEndEvent)):
+                    depth -= 1
 
-    except FileNotFoundError:
-        # yq not installed - return empty list to trigger fallback
+                    # Check if we finished capturing the target value
+                    if state == STATE_CAPTURE_VALUE and depth < target_seq_depth:
+                        # We have popped back up from the sequence
+                        end_line = event.end_mark.line
+                        break
+
+                if state == STATE_SEARCH_ENTRIES:
+                    # We expect 'entries' at the top level or close to it
+                    if isinstance(event, yaml.ScalarEvent) and event.value == 'entries':
+                        state = STATE_WAIT_ENTRIES_VAL
+
+                elif state == STATE_WAIT_ENTRIES_VAL:
+                    if isinstance(event, yaml.MappingStartEvent):
+                        entries_depth = depth # The depth INSIDE the entries mapping
+                        state = STATE_SEARCH_CHART
+
+                elif state == STATE_SEARCH_CHART:
+                    # Strict check: Match chart name AND ensure we are at the top level of 'entries'
+                    if isinstance(event, yaml.ScalarEvent) and event.value == chart_name and depth == entries_depth:
+                        state = STATE_WAIT_CHART_VAL
+                    elif isinstance(event, yaml.MappingEndEvent) and depth < entries_depth:
+                        # We left the entries mapping without finding the chart
+                        return []
+
+                elif state == STATE_WAIT_CHART_VAL:
+                    if isinstance(event, yaml.SequenceStartEvent):
+                        start_line = event.start_mark.line
+                        target_seq_depth = depth # The depth INSIDE the sequence
+                        state = STATE_CAPTURE_VALUE
+                    else:
+                        pass
+    except Exception:
+        # Fallback or error in parsing structure
         return []
+
+    if start_line == -1:
+        return []
+
+    # 2. Extract lines to temporary file
+    lines_to_write = []
+
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            # Note: enumerate is 0-indexed, which matches start_mark.line
+            for i, line in enumerate(f):
+                if i >= start_line:
+                    # end_line corresponds to the line number of the event end mark.
+                    # For block sequences ending with dedent, this mark is often on the line
+                    # containing the *next* token (e.g., the next chart key).
+                    # We typically want to EXCLUDE this line.
+                    if end_line != -1 and i >= end_line:
+                        break
+                    lines_to_write.append(line)
     except Exception:
         return []
+
+    if not lines_to_write:
+        return []
+
+    # 3. Clean up indentation (Dedent)
+    raw_content = "".join(lines_to_write)
+    dedented_content = textwrap.dedent(raw_content)
+
+    # 4. Write temp file and load
+    tmp_file_extract = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+    try:
+        tmp_file_extract.write(dedented_content)
+        tmp_file_extract.close()
+
+        with open(tmp_file_extract.name, 'r') as tf:
+            # Use safe_load as it's standard.
+            data = yaml.safe_load(tf)
+            if isinstance(data, list):
+                if data[0]["name"] != chart_name:
+                    raise ValueError("Extracted Helm chart name does not match requested chart name")
+                return data
+            raise ValueError("Extracted Helm chart versions is not a list")
+
+
+    except Exception:
+        return []
+    finally:
+        if os.path.exists(tmp_file_extract.name):
+            try:
+                os.remove(tmp_file_extract.name)
+            except Exception:
+                pass

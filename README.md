@@ -49,7 +49,6 @@ uvx package-version-check-mcp --mode=stdio
 This automatically installs and runs the latest version from PyPI.
 
 **Requirements:**
-- You need the `yq` binary on PATH if you want to call tool `get_latest_package_versions` for the "helm" ecosystem
 - You need the `mise` binary on PATH if you want to call the tools `get_supported_tools` or `get_latest_tool_versions`
 
 **Optional but recommended:** Set the `GITHUB_PAT` environment variable to a GitHub Personal Access Token (no scopes required) to avoid GitHub API rate limits.
@@ -241,17 +240,6 @@ To see all available tools, use the `get_supported_tools` tool.
 ## Development
 
 ### Prerequisites
-
-#### yq
-
-For Helm ChartMuseum support, the server requires `yq` (a fast YAML processor) to be installed:
-
-- **Linux/macOS**: Download from https://github.com/mikefarah/yq/releases
-- **Fedora/RHEL**: `sudo dnf install yq`
-- **Ubuntu/Debian**: `sudo snap install yq` or download binary from releases
-- **macOS**: `brew install yq`
-
-Without `yq`, Helm ChartMuseum repositories will not work (OCI Helm charts will still work).
 
 #### mise-en-place
 
