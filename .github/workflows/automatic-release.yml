@@ -2,12 +2,98 @@ name: Automatic Release
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1'  # Run every Monday at 9 AM UTC
 
 jobs:
   automatic-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-        # TBC
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PAT }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+
+      - name: Setup go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+          cache: false
+      - name: Setup crane
+        uses: imjasonh/setup-crane@v0.4
+
+      - name: Extract metadata of upstream DHI python image
+        run: |
+          UPSTREAM_IMAGE=$(grep "AS runtime-stage" Dockerfile | awk '{print $2}')
+          echo "Detected upstream image: $UPSTREAM_IMAGE"
+          crane export $UPSTREAM_IMAGE - | tar -Oxf - opt/docker/def/.def.dhi-python.yaml > upstream-python-build-info
+        shell: bash
+
+      - name: Extract metadata of pushed image
+        run: |
+          crane export ${{ steps.meta.outputs.tags }} - | tar -Oxf - opt/docker/def/.def.dhi-python.yaml > pushed-build-info
+        shell: bash
+
+      - name: Extract poetry.lock of pushed image
+        run: |
+          crane export ${{ steps.meta.outputs.tags }} - | tar -Oxf - app/poetry.lock > pushed-poetry.lock
+        shell: bash
+
+
+      - name: Compare python build info files
+        id: compare-python
+        run: |
+          if ! cmp -s upstream-python-build-info pushed-build-info; then
+            echo "files_different=true" >> $GITHUB_OUTPUT
+            echo "Python build info files are different, will trigger a new release"
+          else
+            echo "files_different=false" >> $GITHUB_OUTPUT
+            echo "Python build info files are identical"
+          fi
+        shell: bash
+
+      - name: Compare poetry.lock files
+        id: compare-poetry
+        run: |
+          if ! cmp -s pushed-poetry.lock poetry.lock; then
+            echo "files_different=true" >> $GITHUB_OUTPUT
+            echo "Poetry lock files are different, will trigger a new release"
+          else
+            echo "files_different=false" >> $GITHUB_OUTPUT
+            echo "Poetry lock files are identical"
+          fi
+        shell: bash
+
+      - name: Bump version and push tag
+        if: steps.compare-python.outputs.files_different == 'true' || steps.compare-poetry.outputs.files_different == 'true'
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          # Note: we use a custom PAT, because secrets.GITHUB_TOKEN has a limitation that tags pushed with it
+          # would NOT trigger workflows that are configured for "on -> push -> tags")
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          TAG_PREFIX: v
+          DEFAULT_BUMP: "patch"
+          FORCE_WITHOUT_CHANGES: true
