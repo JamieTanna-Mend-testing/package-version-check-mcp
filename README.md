@@ -16,6 +16,7 @@ Supported ecosystems / tools:
   - **PHP** - PHP packages from Packagist (used by Composer)
   - **Ruby** - Ruby gems from rubygems.org
   - **Rust** - Rust crates from crates.io
+  - **Swift** - Swift packages from GitHub repositories
 - DevOps ecosystems:
   - **Docker** - Docker container images from Docker registries
   - **Helm** - Helm charts from ChartMuseum repositories and OCI registries
@@ -83,7 +84,7 @@ Fetches the latest versions of packages from various ecosystems.
 
 **Input:**
 - `packages`: Array of package specifications, where each item contains:
-  - `ecosystem` (required): Either "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", "php", "rubygems", or "rust"
+  - `ecosystem` (required): Either "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", "php", "rubygems", "rust", or "swift"
   - `package_name` (required): The name of the package
     - For npm: package name (e.g., "express")
     - For pypi: package name (e.g., "requests")
@@ -97,11 +98,12 @@ Fetches the latest versions of packages from various ecosystems.
     - For php: Package name in "vendor/package" format (e.g., "monolog/monolog", "laravel/framework")
     - For rubygems: Gem name (e.g., "rails", "devise")
     - For rust: Crate name (e.g., "serde", "tokio")
+    - For swift: GitHub URL (e.g., "https://github.com/Alamofire/Alamofire.git" or "github.com/owner/repo.git"). Only github.com is supported.
   - `version_hint` (optional):
     - For docker: tag compatibility hint (e.g., "1.36-alpine") to find the latest tag matching the same suffix pattern. If omitted, returns the latest semantic version tag.
     - For helm (OCI only): tag compatibility hint similar to Docker
     - For php: PHP version hint (e.g., "php:8.1" or "8.2") to filter packages compatible with that PHP version. If omitted, returns the latest stable version regardless of PHP compatibility.
-    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/rubygems/rust: not currently used
+    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/rubygems/rust/swift: not currently used
 
 **Output:**
 - `result`: Array of successful lookups with:
@@ -132,7 +134,8 @@ Fetches the latest versions of packages from various ecosystems.
     {"ecosystem": "php", "package_name": "monolog/monolog"},
     {"ecosystem": "php", "package_name": "laravel/framework", "version": "php:8.1"},
     {"ecosystem": "rubygems", "package_name": "rails"},
-    {"ecosystem": "rust", "package_name": "serde"}
+    {"ecosystem": "rust", "package_name": "serde"},
+    {"ecosystem": "swift", "package_name": "https://github.com/Alamofire/Alamofire.git"}
   ]
 }
 ```

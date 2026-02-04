@@ -50,6 +50,8 @@ async def mcp_client():
     (Ecosystem.Rust, "serde", "1.0.228"),
     (Ecosystem.Rust, "tokio", "1.49.0"),
     (Ecosystem.Rust, "clap", "4.5.56"),
+    (Ecosystem.Swift, "https://github.com/Alamofire/Alamofire.git", "5.11.1"),
+    (Ecosystem.Swift, "https://github.com/Moya/Moya.git", "15.0.3"),
 ])
 async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem, package_name, minimum_expected_version):
     """Test fetching valid package versions from different ecosystems."""
@@ -93,7 +95,7 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
         assert response.result[0].digest is None
         assert response.result[0].published_on is None
 
-    if ecosystem is Ecosystem.Go:
+    if ecosystem in (Ecosystem.Go, Ecosystem.Swift):
         assert response.result[0].published_on is not None
         assert response.result[0].digest is not None
 
@@ -118,6 +120,7 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
     (Ecosystem.PHP, "nonexistent-vendor-12345/nonexistent-package-12345"),
     (Ecosystem.RubyGems, "nonexistent-gem-12345-definitely-does-not-exist"),
     (Ecosystem.Rust, "nonexistent-crate-12345-definitely-does-not-exist"),
+    (Ecosystem.Swift, "https://github.com/nonexistent-user-12345/nonexistent-repo-12345.git"),
 ])
 async def test_get_latest_package_versions_not_found(mcp_client: Client, ecosystem, package_name):
     """Test fetching non-existent packages from different ecosystems."""

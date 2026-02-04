@@ -1,40 +1,10 @@
-import os
 from typing import Any, Optional
 
 import httpx
 import yaml
 
 from .structs import GitHubActionResult, GitHubActionError
-
-
-async def fetch_github_action_latest_tag(
-    owner: str, repo: str, client: httpx.AsyncClient
-) -> tuple[str, str]:
-    """Fetch the latest Git tag for a GitHub repository.
-
-    Args:
-        owner: The repository owner
-        repo: The repository name
-        client: httpx AsyncClient to use for requests
-
-    Returns:
-        A tuple of (tag_name, commit_sha) e.g., ("v3.2.4", "abc123...")
-
-    Raises:
-        Exception: If tags cannot be fetched
-    """
-    # Use GitHub API to get tags
-    url = f"https://api.github.com/repos/{owner}/{repo}/tags"
-
-    response = await client.get(url)
-    response.raise_for_status()
-    tags = response.json()
-
-    if not tags:
-        raise ValueError(f"No tags found for {owner}/{repo}")
-
-    # Return the first (most recent) tag name and its commit SHA
-    return tags[0]["name"], tags[0]["commit"]["sha"]
+from ..get_latest_versions_pkg.utils.github import fetch_latest_github_tag, create_github_client
 
 
 async def fetch_github_action_metadata(
@@ -134,18 +104,9 @@ async def fetch_github_action(
 
         owner, repo = parts
 
-        # Prepare headers with optional GitHub PAT authentication
-        headers = {"Accept": "application/vnd.github.v3+json"}
-        github_pat = os.environ.get("GITHUB_PAT")
-        if github_pat:
-            headers["Authorization"] = f"token {github_pat}"
-
-        async with httpx.AsyncClient(
-            timeout=30.0,
-            headers=headers,
-        ) as client:
-            # Fetch the latest tag and its commit SHA
-            latest_tag, commit_sha = await fetch_github_action_latest_tag(owner, repo, client)
+        async with create_github_client(timeout=30.0) as client:
+            # Fetch the latest tag and its commit SHA (date is discarded for actions)
+            latest_tag, commit_sha, _ = await fetch_latest_github_tag(owner, repo, client)
 
             # Fetch the action.yml metadata
             metadata = await fetch_github_action_metadata(owner, repo, latest_tag, client)
