@@ -423,39 +423,6 @@ class Version(_BaseVersion):
         return self.release[2] if len(self.release) >= 3 else 0
 
 
-class _TrimmedRelease(Version):
-    __slots__ = ()
-
-    def __init__(self, version: str | Version) -> None:
-        if isinstance(version, Version):
-            self._release = version._release
-            self._dev = version._dev
-            self._pre = version._pre
-            self._post = version._post
-            self._variant = version._variant
-            self._key_cache = version._key_cache
-            return
-        super().__init__(version)  # pragma: no cover
-
-    @property
-    def release(self) -> tuple[int, ...]:
-        """
-        Release segment without any trailing zeros.
-
-        >>> _TrimmedRelease('1.0.0').release
-        (1,)
-        >>> _TrimmedRelease('0.0').release
-        (0,)
-        """
-        # This leaves one 0.
-        rel = super().release
-        len_release = len(rel)
-        i = len_release
-        while i > 1 and rel[i - 1] == 0:
-            i -= 1
-        return rel if i == len_release else rel[:i]
-
-
 def _parse_letter_version(
     letter: str | None, number: str | bytes | SupportsInt | None
 ) -> tuple[str, int] | None:

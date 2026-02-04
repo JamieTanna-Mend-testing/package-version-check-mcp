@@ -8,7 +8,7 @@ from package_version_check_mcp.main import (
 )
 from package_version_check_mcp.get_latest_versions_pkg.structs import Ecosystem, PackageVersionRequest, \
     GetLatestVersionsResponse
-from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser import compare_semver
+from package_version_check_mcp.utils.version_parser import Version
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ async def mcp_client():
     (Ecosystem.MavenGradle, "org.springframework:spring-core", "7.0.3"),
     (Ecosystem.MavenGradle, "com.google.guava:guava", "33.5.0-jre"),
     (Ecosystem.MavenGradle, "org.apache.commons:commons-lang3", "3.20.0"),
-    (Ecosystem.MavenGradle, "org.springframework.boot:spring-boot-starter-parent", "4.1.0-M1"),
+    (Ecosystem.MavenGradle, "org.springframework.boot:spring-boot-starter-parent", "4.0.2"),
     (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/nginx", "22.4.3"),
     (Ecosystem.Helm, "https://charts.bitnami.com/bitnami/redis", "24.1.2"),
     (Ecosystem.Helm, "https://prometheus-community.github.io/helm-charts/prometheus", "28.7.0"),
@@ -53,7 +53,8 @@ async def mcp_client():
     (Ecosystem.Swift, "https://github.com/Alamofire/Alamofire.git", "5.11.1"),
     (Ecosystem.Swift, "https://github.com/Moya/Moya.git", "15.0.3"),
 ])
-async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem, package_name, minimum_expected_version):
+async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem: Ecosystem, package_name: str,
+                                                   minimum_expected_version: str):
     """Test fetching valid package versions from different ecosystems."""
     result = await mcp_client.call_tool(
         name="get_latest_package_versions",
@@ -73,17 +74,13 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
         f"Expected version to contain '.', got {response.result[0].latest_version}"
     )
 
-    # TODO: in the future, we need to improve the version comparison, especially for Maven/Gradle
-    # where we have these special cases like "33.5.0-jre" or "4.1.0-M1". It might make sense to
-    # create a fork of packaging.version.Version that can handle these suffixes as "variants".
-    # Once that is done, we could also get rid of compare_semver() (which handles invalid
-    # versions gracefully by returning 0) and use something like "v1 < v2" directly.
-    # In the JavaGradle parser, we would then no longer rely on the value in <release> but parse
-    # the full <versions> list.
-
-    # Verify the version is at least the minimum expected version
-    assert compare_semver(response.result[0].latest_version, minimum_expected_version) >= 0, \
+    minimum_expected_version_obj = Version(minimum_expected_version)
+    latest_version = Version(response.result[0].latest_version)
+    assert latest_version >= minimum_expected_version_obj, \
         f"Expected version >= {minimum_expected_version}, got {response.result[0].latest_version}"
+    if minimum_expected_version_obj.variant:
+        assert latest_version.variant == minimum_expected_version_obj.variant, \
+            f"Expected variant '{minimum_expected_version_obj.variant}', got '{latest_version.variant}'"
 
     if ecosystem is Ecosystem.Docker:
         assert response.result[0].digest is not None

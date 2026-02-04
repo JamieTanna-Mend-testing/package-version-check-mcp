@@ -2,10 +2,9 @@
 
 from typing import Callable
 import httpx
-import functools
 
 from ..structs import PackageVersionResult, Ecosystem
-from ..utils.version_parser import compare_semver
+from ...utils.version_parser import Version, InvalidVersion
 
 
 def parse_terraform_provider_name(package_name: str) -> tuple[str, str, str]:
@@ -135,8 +134,14 @@ async def _fetch_terraform_registry_version(
         if not stable_versions:
             raise Exception(f"No valid versions found for '{package_name}'")
 
+        def _safe_version_key(v_str: str) -> Version:
+            try:
+                return Version(v_str)
+            except InvalidVersion:
+                return Version("0.0.0")
+
         # Sort versions and get the latest
-        stable_versions.sort(key=functools.cmp_to_key(compare_semver), reverse=True)
+        stable_versions.sort(key=_safe_version_key, reverse=True)
         latest_version = stable_versions[0]
 
         return PackageVersionResult(

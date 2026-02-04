@@ -6,7 +6,8 @@ from typing import Optional
 import httpx
 
 from ..structs import PackageVersionResult, Ecosystem
-from ..utils.version_parser import parse_semver
+from ..utils.version_parser import parse_docker_tag
+from ...utils.version_parser import Version, InvalidVersion
 
 
 async def fetch_php_version(
@@ -69,8 +70,12 @@ async def fetch_php_version(
             version = current_record.get("version", "")
 
             # Skip non-stable versions (those with prerelease suffix)
-            _, prerelease = parse_semver(version)
-            if prerelease:
+            try:
+                # Basic check for prerelease property
+                if Version(version).is_prerelease:
+                    continue
+            except InvalidVersion:
+                # Skip invalid versions
                 continue
 
             # Take the first stable version that matches (they're ordered newest first)

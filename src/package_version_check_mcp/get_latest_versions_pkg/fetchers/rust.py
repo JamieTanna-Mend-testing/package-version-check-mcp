@@ -3,7 +3,7 @@
 import httpx
 
 from ..structs import PackageVersionResult, Ecosystem
-from ..utils.version_parser import parse_semver
+from ...utils.version_parser import Version, InvalidVersion
 
 
 async def fetch_rust_version(package_name: str) -> PackageVersionResult:
@@ -35,17 +35,14 @@ async def fetch_rust_version(package_name: str) -> PackageVersionResult:
 
         for version_data in versions:
             version_num = version_data.get("num", "")
-            _, prerelease = parse_semver(version_num)
-
-            if prerelease == "invalid":
-                # Skip invalid versions
+            try:
+                v = Version(version_num)
+                if v.is_prerelease:
+                    prerelease_versions.append(version_data)
+                else:
+                    stable_versions.append(version_data)
+            except InvalidVersion:
                 continue
-            elif prerelease:
-                # It's a prerelease
-                prerelease_versions.append(version_data)
-            else:
-                # It's a stable version
-                stable_versions.append(version_data)
 
         # Prefer stable versions, fall back to prereleases if no stable versions exist
         if stable_versions:

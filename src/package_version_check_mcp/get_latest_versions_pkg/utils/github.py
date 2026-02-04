@@ -4,6 +4,8 @@ import os
 
 import httpx
 
+from ...utils.version_parser import Version, InvalidVersion
+
 
 async def fetch_latest_github_tag(
     owner: str, repo: str, client: httpx.AsyncClient
@@ -31,8 +33,21 @@ async def fetch_latest_github_tag(
     if not tags:
         raise ValueError(f"No tags found for {owner}/{repo}")
 
-    tag_name = tags[0]["name"]
-    commit_sha = tags[0]["commit"]["sha"]
+    # Default to the first tag if no stable version is found
+    # This keeps specific behavior for repos that might only use prereleases or non-semver tags
+    target_tag = tags[0]
+
+    for tag in tags:
+        try:
+            version = Version(tag["name"])
+            if not version.is_prerelease:
+                target_tag = tag
+                break
+        except (InvalidVersion, ValueError):
+            continue
+
+    tag_name = target_tag["name"]
+    commit_sha = target_tag["commit"]["sha"]
 
     # Fetch the commit details to get the date
     commit_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}"

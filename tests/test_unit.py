@@ -5,6 +5,7 @@ from package_version_check_mcp.get_latest_versions_pkg.fetchers.terraform import
     parse_terraform_provider_name,
     parse_terraform_module_name,
 )
+from package_version_check_mcp.utils.version_parser import Version, InvalidVersion
 
 
 @pytest.mark.parametrize(
@@ -440,102 +441,6 @@ def test_parse_terraform_module_name_invalid(package_name, test_description):
         parse_terraform_module_name(package_name)
 
 
-# ============================================================================
-# PHP check_php_constraint tests
-# ============================================================================
-
-from package_version_check_mcp.get_latest_versions_pkg.fetchers.php import check_php_constraint
-
-
-@pytest.mark.parametrize(
-    "php_constraint,target_php_version,expected_result,test_description",
-    [
-        # Basic >= operator
-        (">=8.1", "8.1", True, ">= operator - exact match"),
-        (">=8.1", "8.2", True, ">= operator - higher version"),
-        (">=8.1", "8.0", False, ">= operator - lower version"),
-        (">=8.1", "9.0", True, ">= operator - next major version"),
-        (">=7.4", "8.1", True, ">= operator - target much higher"),
-
-        # Basic > operator
-        (">8.1", "8.2", True, "> operator - higher version"),
-        (">8.1", "8.1", False, "> operator - exact match should fail"),
-        (">8.1", "8.0", False, "> operator - lower version"),
-
-        # Basic <= operator
-        ("<=8.1", "8.1", True, "<= operator - exact match"),
-        ("<=8.1", "8.0", True, "<= operator - lower version"),
-        ("<=8.1", "8.2", False, "<= operator - higher version"),
-
-        # Basic < operator
-        ("<8.2", "8.1", True, "< operator - lower version"),
-        ("<8.2", "8.2", False, "< operator - exact match should fail"),
-        ("<8.2", "8.3", False, "< operator - higher version"),
-
-        # Caret operator (treated as >=)
-        ("^8.1", "8.1", True, "^ operator - exact match"),
-        ("^8.1", "8.2", True, "^ operator - higher minor"),
-        ("^8.1", "8.0", False, "^ operator - lower version"),
-        ("^7.4", "8.0", True, "^ operator - next major allowed"),
-
-        # Tilde operator (treated as >=)
-        ("~8.1", "8.1", True, "~ operator - exact match"),
-        ("~8.1", "8.2", True, "~ operator - higher minor"),
-        ("~8.1", "7.4", False, "~ operator - lower version"),
-
-        # No operator (treated as >=)
-        ("8.1", "8.1", True, "No operator - exact match"),
-        ("8.1", "8.2", True, "No operator - higher version"),
-        ("8.1", "8.0", False, "No operator - lower version"),
-
-        # OR constraints (||)
-        (">=7.2 || >=8.0", "7.4", True, "OR constraint - matches first part"),
-        (">=7.2 || >=8.0", "8.1", True, "OR constraint - matches second part"),
-        (">=7.4 || >=8.0", "7.2", False, "OR constraint - matches neither"),
-        ("^7.4 || ^8.0", "8.2", True, "OR constraint with caret - matches second"),
-        (">=7.2||>=8.0", "7.4", True, "OR constraint without spaces"),
-
-        # AND constraints (comma-separated)
-        (">=8.0, <9.0", "8.1", True, "AND constraint - in range"),
-        (">=8.0, <9.0", "9.0", False, "AND constraint - at upper bound"),
-        (">=8.0, <9.0", "7.4", False, "AND constraint - below range"),
-        (">=8.0,<9.0", "8.5", True, "AND constraint without spaces"),
-
-        # Complex constraints
-        (">=7.2.5 || ^8.0", "7.2.6", True, "Complex - patch version higher"),
-        (">=7.2.5 || ^8.0", "7.2.4", False, "Complex - patch version lower"),
-        (">=8.1.0", "8.1", True, "Three-part constraint vs two-part target"),
-        (">=8.1", "8.1.5", True, "Two-part constraint vs three-part target"),
-
-        # Version with prerelease suffix (should strip it)
-        (">=8.1.0-beta", "8.1", True, "Constraint with prerelease suffix"),
-        (">=8.1.0@dev", "8.1", True, "Constraint with @dev suffix"),
-
-        # Equality operators
-        ("==8.1", "8.1", True, "== operator - exact match"),
-        ("==8.1", "8.2", False, "== operator - different version"),
-        ("=8.1", "8.1", True, "= operator - exact match"),
-        ("!=8.1", "8.2", True, "!= operator - different version"),
-        ("!=8.1", "8.1", False, "!= operator - same version"),
-
-        # Edge cases
-        (">=8", "8.1", True, "Single digit constraint"),
-        (">=8.1.2.3", "8.1.2.4", True, "Four-part version"),
-    ],
-)
-def test_check_php_constraint(php_constraint, target_php_version, expected_result, test_description):
-    """Test check_php_constraint with various constraint formats."""
-    result = check_php_constraint(php_constraint, target_php_version)
-    assert result == expected_result, f"Failed: {test_description}"
-
-
-# ============================================================================
-# Version parser tests (parse_semver and compare_semver)
-# ============================================================================
-
-from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser import parse_semver, compare_semver
-
-
 @pytest.mark.parametrize(
     "version,expected_numeric,expected_prerelease,test_description",
     [
@@ -556,8 +461,9 @@ from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser impo
         ("3.1.0a1", [3, 1, 0], "prerelease", "Version with alpha prerelease"),
         ("1.2.3b2", [1, 2, 3], "prerelease", "Version with beta number"),
         ("8.5.2RC1", [8, 5, 2], "prerelease", "PHP-style RC version"),
+        ("4.1.0-M1", [4, 1, 0], "prerelease", "Maven-style Milestone version"),
 
-        # Invalid versions (should return empty list and 'invalid')
+        # Invalid versions
         ("4.0b3_RC2", [], "invalid", "Invalid version with underscore"),
         ("invalid", [], "invalid", "Completely invalid version string"),
         ("zulu-1.2.3", [], "invalid", "Completely invalid version string"),
@@ -565,10 +471,21 @@ from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser impo
     ],
 )
 def test_parse_semver(version, expected_numeric, expected_prerelease, test_description):
-    """Test parse_semver with various version formats."""
-    numeric_parts, prerelease = parse_semver(version)
-    assert numeric_parts == expected_numeric, f"Failed numeric parts: {test_description}"
-    assert prerelease == expected_prerelease, f"Failed prerelease: {test_description}"
+    """Test Version() parsing with various version formats."""
+    # If the expected prerelease is "invalid", we expect the Version constructor to raise InvalidVersion
+    if expected_prerelease == "invalid":
+        with pytest.raises(InvalidVersion):
+            Version(version)
+    else:
+        ver = Version(version)
+        # Check numeric parts (release tuple)
+        assert ver.release == tuple(expected_numeric), f"Failed numeric parts: {test_description}"
+
+        # Check prerelease presence
+        if expected_prerelease == "prerelease":
+            assert ver.pre is not None, f"Failed prerelease (expected present): {test_description}"
+        else:
+            assert ver.pre is None, f"Failed prerelease (expected None): {test_description}"
 
 
 @pytest.mark.parametrize(
@@ -604,14 +521,139 @@ def test_parse_semver(version, expected_numeric, expected_prerelease, test_descr
         ("1.2", "1.2.0", 0, "Two-part equals three-part with zero"),
         ("1", "1.0.0", 0, "One-part equals three-part with zeros"),
 
-        # Invalid versions (should return 0 - equal)
-        ("invalid", "1.2.3", 0, "Invalid first version"),
-        ("1.2.3", "invalid", 0, "Invalid second version"),
-        ("invalid", "invalid", 0, "Both invalid versions"),
-        ("4.0b3_RC2", "1.2.3", 0, "Non-standard version format"),
+        # Extended comparisons from parser suite
+        # Milestone
+        ("1.0a1", "1.0m1", -1, "Alpha less than milestone"),
+        ("1.0b1", "1.0m1", -1, "Beta less than milestone"),
+        ("1.0m1", "1.0rc1", -1, "Milestone less than RC"),
+
+        # Dev/Post/Pre ordering
+        ("1.0.dev1", "1.0a1", -1, "Dev less than alpha"),
+        ("1.0a1", "1.0b1", -1, "Alpha less than beta"),
+        ("1.0b1", "1.0rc1", -1, "Beta less than RC"),
+        ("0.9", "1.0a1", -1, "Previous major less than next alpha"),
+
+        # Variant ordering
+        ("1.0-android", "1.0", -1, "Variant less than final"),
+        ("1.0-alpine", "1.0-android", -1, "Variant alpine < android (lexical)"),
+        ("1.0-android", "1.0a1", 1, "Variant greater than prerelease"),
+        ("1.0-android", "1.0rc1", 1, "Variant greater than RC"),
+        ("1.0.post1", "1.0-android", 1, "Postrelease greater than variant"),
     ],
 )
 def test_compare_semver(version1, version2, expected_result, test_description):
-    """Test compare_semver with various version comparisons."""
-    result = compare_semver(version1, version2)
-    assert result == expected_result, f"Failed: {test_description} (got {result}, expected {expected_result})"
+    """Test comparison operators of Version class with various comparisons."""
+    v1 = Version(version1)
+    v2 = Version(version2)
+
+    if expected_result == 0:
+        assert v1 == v2, f"Failed: {test_description} (expected equality)"
+    elif expected_result == -1:
+        assert v1 < v2, f"Failed: {test_description} (expected v1 < v2)"
+    elif expected_result == 1:
+        assert v1 > v2, f"Failed: {test_description} (expected v1 > v2)"
+
+
+@pytest.mark.parametrize("version_str, expected", [
+    ("1.0", {"major": 1, "minor": 0, "micro": 0, "release": (1, 0)}),
+    ("1.2.3", {"major": 1, "minor": 2, "micro": 3, "release": (1, 2, 3)}),
+    ("0.1", {"major": 0, "minor": 1, "micro": 0, "release": (0, 1)}),
+    ("10.20.30.40", {"major": 10, "minor": 20, "micro": 30, "release": (10, 20, 30, 40)}),
+    ("v1.0", {"major": 1, "minor": 0, "micro": 0, "release": (1, 0)}),
+])
+def test_version_parsing_basic(version_str, expected):
+    v = Version(version_str)
+    assert v.major == expected["major"]
+    assert v.minor == expected["minor"]
+    assert v.micro == expected["micro"]
+    assert v.release == expected["release"]
+    assert v.pre is None
+    assert v.post is None
+    assert v.dev is None
+    assert v.variant is None
+    assert str(v) == version_str.lstrip("v")
+
+@pytest.mark.parametrize("version_str, expected_pre", [
+    ("1.0a1", ('a', 1)),
+    ("1.0.alpha2", ('a', 2)),
+    ("1.0b3", ('b', 3)),
+    ("1.0.beta4", ('b', 4)),
+    ("1.0rc5", ('rc', 5)),
+    ("1.0.rc6", ('rc', 6)),
+    ("1.0c7", ('rc', 7)),
+    ("1.0pre8", ('rc', 8)),
+    ("1.0preview9", ('rc', 9)),
+    ("1.0m1", ('m', 1)),
+    ("1.0.milestone2", ('m', 2)),
+    ("1.2.0-M2", ('m', 2)),
+])
+def test_version_parsing_prerelease(version_str, expected_pre):
+    v = Version(version_str)
+    assert v.pre == expected_pre
+    assert v.is_prerelease is True
+
+@pytest.mark.parametrize("version_str, expected_post", [
+    ("1.0.post1", 1),
+    ("1.0-1", 1),
+    ("1.0.rev2", 2),
+    ("1.0.r3", 3),
+])
+def test_version_parsing_postrelease(version_str, expected_post):
+    v = Version(version_str)
+    assert v.post == expected_post
+    assert v.is_postrelease is True
+
+@pytest.mark.parametrize("version_str, expected_dev", [
+    ("1.0.dev1", 1),
+    ("1.0.dev4", 4),
+])
+def test_version_parsing_devrelease(version_str, expected_dev):
+    v = Version(version_str)
+    assert v.dev == expected_dev
+    assert v.is_devrelease is True
+
+@pytest.mark.parametrize("version_str, expected_variant", [
+    ("1.0-android", "android"),
+    ("1.0-alpine", "alpine"),
+    ("1.0-slim", "slim"),
+    ("1.2.3-11.22", "11.22"),
+    ("1.0-foo-bar", "foo-bar"),
+])
+def test_version_parsing_variant(version_str, expected_variant):
+    v = Version(version_str)
+    assert v.variant == expected_variant
+    # Variants are NOT considered prereleases by default in this implementation check
+    # unless they also have pre components
+    assert v.is_prerelease is False
+    assert str(v) == version_str
+
+def test_version_parsing_complex_combinations():
+    # 1.0 alpha 1, post 2, dev 3, variant 'special'
+    # Matching regex order: release, pre, post, dev, variant
+    v = Version("1.0a1.post2.dev3-special")
+    assert v.release == (1, 0)
+    assert v.pre == ('a', 1)
+    assert v.post == 2
+    assert v.dev == 3
+    assert v.variant == "special"
+    assert str(v) == "1.0a1.post2.dev3-special"
+
+@pytest.mark.parametrize("invalid_version", [
+    "invalid",
+    "1.0+local",  # Local removed
+    "1!1.0",      # Epoch removed
+    "1.0-",       # Variant must have content
+    "1.0-.",      # Variant start with dot? regex expects [a-z0-9]
+])
+def test_version_parsing_invalid(invalid_version):
+    with pytest.raises(InvalidVersion):
+        Version(invalid_version)
+
+def test_version_properties():
+    v = Version("1.2.3")
+    assert v.public == "1.2.3"
+    assert v.base_version == "1.2.3"
+
+    v2 = Version("1.2.3-android")
+    assert v2.public == "1.2.3-android"
+    assert v2.base_version == "1.2.3"

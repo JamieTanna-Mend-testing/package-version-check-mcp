@@ -4,6 +4,7 @@ import httpx
 import xml.etree.ElementTree as ET
 
 from ..structs import PackageVersionResult, Ecosystem
+from ...utils.version_parser import Version, InvalidVersion
 
 
 def parse_maven_package_name(package_name: str) -> tuple[str, str, str]:
@@ -100,25 +101,41 @@ async def fetch_maven_gradle_version(package_name: str) -> PackageVersionResult:
         # Parse the XML response
         root = ET.fromstring(response.text)
 
-        # Look for <versioning><release>...</release></versioning>
+        # Look for <versioning><versions>...</versions></versioning>
         versioning = root.find("versioning")
         if versioning is None:
             raise Exception(f"No versioning information found for package '{package_name}'")
 
-        release = versioning.find("release")
-        if release is None or not release.text:
-            # Fall back to <latest> if <release> is not available
-            latest = versioning.find("latest")
-            if latest is None or not latest.text:
-                raise Exception(f"No release or latest version found for package '{package_name}'")
-            version = latest.text
-        else:
-            version = release.text
+        versions_element = versioning.find("versions")
+        if versions_element is None:
+            raise Exception(f"No versions list found for package '{package_name}'")
+
+        # Parse all version strings from <version> elements
+        version_strings = [v.text for v in versions_element.findall("version") if v.text]
+        if not version_strings:
+            raise Exception(f"No versions found for package '{package_name}'")
+
+        # Parse versions and filter for stable releases only (no pre-releases)
+        stable_versions = []
+        for version_str in version_strings:
+            try:
+                parsed_version = Version(version_str)
+                if not parsed_version.is_prerelease:
+                    stable_versions.append(parsed_version)
+            except InvalidVersion:
+                # Skip versions that can't be parsed
+                continue
+
+        if not stable_versions:
+            raise Exception(f"No stable versions found for package '{package_name}'")
+
+        # Find the latest stable version
+        latest_version = max(stable_versions)
 
         return PackageVersionResult(
             ecosystem=Ecosystem.MavenGradle,
             package_name=package_name,
-            latest_version=version,
+            latest_version=str(latest_version),
             digest=None,  # Not reliably available from maven-metadata.xml
             published_on=None,  # Not reliably available from maven-metadata.xml
         )

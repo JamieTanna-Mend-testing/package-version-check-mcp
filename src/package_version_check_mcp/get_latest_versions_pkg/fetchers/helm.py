@@ -12,7 +12,7 @@ import textwrap
 from docker_registry_client_async import DockerRegistryClientAsync, ImageName
 
 from ..structs import PackageVersionResult, Ecosystem
-from ..utils.version_parser import compare_semver, parse_semver
+from ...utils.version_parser import Version, InvalidVersion
 from .docker import get_docker_image_tags, determine_latest_image_tag
 
 
@@ -162,7 +162,7 @@ async def fetch_helm_chartmuseum_version(
             raise Exception(f"Chart '{chart_name}' not found in repository at {registry_url}")
 
         # Filter out deprecated charts and find the latest semantic version
-        latest_version = None
+        latest_version: Optional[Version] = None
         latest_digest = None
         latest_created = None
 
@@ -176,13 +176,16 @@ async def fetch_helm_chartmuseum_version(
                 continue
 
             # Skip prerelease versions
-            _, prerelease = parse_semver(version)
-            if prerelease:
+            try:
+                v_obj = Version(version)
+                if v_obj.is_prerelease:
+                    continue
+            except InvalidVersion:
                 continue
 
             # Use semantic version comparison to find the latest
-            if latest_version is None or compare_semver(version, latest_version) > 0:
-                latest_version = version
+            if latest_version is None or v_obj > latest_version:
+                latest_version = v_obj
                 latest_digest = version_entry.get("digest")
                 latest_created = version_entry.get("created")
 
@@ -192,7 +195,7 @@ async def fetch_helm_chartmuseum_version(
         return PackageVersionResult(
             ecosystem=Ecosystem.Helm,
             package_name=original_package_name,
-            latest_version=latest_version,
+            latest_version=str(latest_version),
             digest=latest_digest,
             published_on=latest_created,
         )

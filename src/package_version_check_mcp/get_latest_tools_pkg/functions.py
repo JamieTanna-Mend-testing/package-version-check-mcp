@@ -4,7 +4,7 @@ import json
 import subprocess
 from typing import Union
 
-from package_version_check_mcp.get_latest_versions_pkg.utils.version_parser import parse_semver, compare_semver
+from package_version_check_mcp.utils.version_parser import Version, InvalidVersion
 from .structs import LatestToolResult, LatestToolError
 
 
@@ -17,9 +17,10 @@ def is_stable_version(version: str) -> bool:
     Returns:
         True if the version is stable (no prerelease suffix), False otherwise
     """
-    _, prerelease = parse_semver(version)
-    # A version is stable if it has no prerelease suffix
-    return not prerelease
+    try:
+        return not Version(version).is_prerelease
+    except InvalidVersion:
+        return False
 
 
 def is_numeric_version(version: str) -> bool:
@@ -90,8 +91,11 @@ async def fetch_latest_tool_version(tool_name: str) -> Union[LatestToolResult, L
         # But to be safe, let's find the max using semver comparison
         latest_version = versions_to_check[0]
         for version in versions_to_check[1:]:
-            if compare_semver(version, latest_version) > 0:
-                latest_version = version
+            try:
+                if Version(version) > Version(latest_version):
+                    latest_version = version
+            except InvalidVersion:
+                continue
 
         return LatestToolResult(
             tool_name=tool_name,
