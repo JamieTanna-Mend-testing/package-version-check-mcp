@@ -50,7 +50,7 @@ jobs:
           export GITHUB_PAT=${{ secrets.GH_READONLY_PAT_NO_SCOPES }}
           ./.poetry/bin/poetry run pytest
 
-      - name: Build distribution and upload artifact
+      - name: Build distribution
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           ./.poetry/bin/poetry build
