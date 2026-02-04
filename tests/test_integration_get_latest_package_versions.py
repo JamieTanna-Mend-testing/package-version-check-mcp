@@ -271,39 +271,4 @@ async def test_get_latest_package_versions_docker_with_tag_hint(
         f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"
 
 
-@pytest.mark.parametrize("package_name,version_hint", [
-    ("monolog/monolog", "php:8.1"),
-    ("monolog/monolog", "8.2"),
-    ("symfony/console", "php:8.1"),
-])
-async def test_get_latest_package_versions_php_with_version_hint(
-    mcp_client: Client, package_name, version_hint
-):
-    """Test fetching PHP package versions with PHP version compatibility hint."""
-    result = await mcp_client.call_tool(
-        name="get_latest_package_versions",
-        arguments={
-            "packages": [
-                PackageVersionRequest(
-                    ecosystem=Ecosystem.PHP,
-                    package_name=package_name,
-                    version_hint=version_hint
-                )
-            ]
-        }
-    )
 
-    assert result.structured_content is not None
-    response = GetLatestVersionsResponse.model_validate(result.structured_content)
-    assert len(response.result) == 1, \
-        f"Expected 1 result, got {len(response.result)}: {response.result}. " \
-        f"Errors: {response.lookup_errors}"
-    assert response.result[0].ecosystem is Ecosystem.PHP
-    assert response.result[0].package_name == package_name
-    assert "." in response.result[0].latest_version, \
-        f"Expected version to contain '.', got {response.result[0].latest_version}"
-    # PHP packages should have published_on but no digest
-    assert response.result[0].published_on is not None
-    assert response.result[0].digest is None
-    assert len(response.lookup_errors) == 0, \
-        f"Expected 0 errors, got {len(response.lookup_errors)}: {response.lookup_errors}"

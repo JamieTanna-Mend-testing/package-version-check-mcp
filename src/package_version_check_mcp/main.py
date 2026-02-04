@@ -57,8 +57,7 @@ async def get_latest_package_versions(
               For Swift, use the GitHub URL (e.g., "https://github.com/owner/repo.git" or "github.com/owner/repo.git") - only github.com is supported
             - version_hint: (optional) For Docker and Helm OCI, used as a tag compatibility hint (e.g., "1.2-alpine")
               to find the latest tag matching the same suffix pattern.
-              For PHP, used as a PHP version hint (e.g., "php:8.1") to filter packages compatible with that PHP version.
-              For NPM/PyPI/NuGet/Maven/ChartMuseum/Go/RubyGems/Rust/Swift, not used.
+              For NPM/PyPI/NuGet/Maven/ChartMuseum/Go/PHP/RubyGems/Rust/Swift, not used.
 
     Returns:
         GetLatestVersionsResponse containing:
@@ -84,7 +83,6 @@ async def get_latest_package_versions(
         ...     PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="oci://ghcr.io/argoproj/argo-helm/argo-cd"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Go, package_name="github.com/gin-gonic/gin"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.PHP, package_name="monolog/monolog"),
-        ...     PackageVersionRequest(ecosystem=Ecosystem.PHP, package_name="laravel/framework", version_hint="php:8.1"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.RubyGems, package_name="rails"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Rust, package_name="serde"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Swift, package_name="https://github.com/Alamofire/Alamofire.git"),

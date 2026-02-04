@@ -102,8 +102,7 @@ Fetches the latest versions of packages from various ecosystems.
   - `version_hint` (optional):
     - For docker: tag compatibility hint (e.g., "1.36-alpine") to find the latest tag matching the same suffix pattern. If omitted, returns the latest semantic version tag.
     - For helm (OCI only): tag compatibility hint similar to Docker
-    - For php: PHP version hint (e.g., "php:8.1" or "8.2") to filter packages compatible with that PHP version. If omitted, returns the latest stable version regardless of PHP compatibility.
-    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/rubygems/rust/swift: not currently used
+    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/php/rubygems/rust/swift: not currently used
 
 **Output:**
 - `result`: Array of successful lookups with:
@@ -132,7 +131,6 @@ Fetches the latest versions of packages from various ecosystems.
     {"ecosystem": "terraform_module", "package_name": "terraform-aws-modules/vpc/aws"},
     {"ecosystem": "go", "package_name": "github.com/gin-gonic/gin"},
     {"ecosystem": "php", "package_name": "monolog/monolog"},
-    {"ecosystem": "php", "package_name": "laravel/framework", "version": "php:8.1"},
     {"ecosystem": "rubygems", "package_name": "rails"},
     {"ecosystem": "rust", "package_name": "serde"},
     {"ecosystem": "swift", "package_name": "https://github.com/Alamofire/Alamofire.git"}

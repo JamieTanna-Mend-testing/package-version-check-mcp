@@ -49,7 +49,7 @@ async def fetch_package_version(
         elif request.ecosystem == Ecosystem.Go:
             return await fetch_go_version(request.package_name)
         elif request.ecosystem == Ecosystem.PHP:
-            return await fetch_php_version(request.package_name, request.version_hint)
+            return await fetch_php_version(request.package_name)
         elif request.ecosystem == Ecosystem.RubyGems:
             return await fetch_rubygems_version(request.package_name)
         elif request.ecosystem == Ecosystem.Rust:
