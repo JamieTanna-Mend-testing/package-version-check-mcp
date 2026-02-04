@@ -24,5 +24,18 @@
         "# renovate-docker-env: datasource=(?<datasource>[a-z-]+?)(?: depName=(?<depName>.+?))(?: versioning=(?<versioning>[a-z-]+?))?(?: extractVersion=(?<extractVersion>.+?))?\\s(?:ENV|ARG) .+?_VERSION=(?<currentValue>.+?)\\s"
       ]
     }
+  ],
+  "registryAliases": {
+    // See https://github.com/renovatebot/renovate/discussions/40077#discussioncomment-15300800
+    // for why this is necessary
+    "dhi.io": "dhi.io"
+  },
+  "hostRules": [
+    {
+      "matchHost": "dhi.io",
+      "hostType": "docker",
+      "username": "{{ secrets.DHI_USERNAME }}",
+      "password": "{{ secrets.DHI_PASSWORD }}"
+    }
   ]
 }
