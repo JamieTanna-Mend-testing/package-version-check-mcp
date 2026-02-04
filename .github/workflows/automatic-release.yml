@@ -1,0 +1,13 @@
+name: Automatic Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  automatic-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        # TBC
