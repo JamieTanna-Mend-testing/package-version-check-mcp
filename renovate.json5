@@ -8,10 +8,10 @@
   "labels": [
     "dependencies"
   ],
+  "automerge": true,
   "lockFileMaintenance": {
     "enabled": true
   },
-  "automerge": false,
   "customManagers": [
     {
       "customType": "regex",
@@ -23,15 +23,6 @@
       "matchStrings": [
         "# renovate-docker-env: datasource=(?<datasource>[a-z-]+?)(?: depName=(?<depName>.+?))(?: versioning=(?<versioning>[a-z-]+?))?(?: extractVersion=(?<extractVersion>.+?))?\\s(?:ENV|ARG) .+?_VERSION=(?<currentValue>.+?)\\s"
       ]
-    }
-  ],
-  "packageRules": [
-    {
-      "description": "We allow automerges everywhere, EXCEPT for major/minor Python upgrades",
-      "matchPackageNames": ["python"],
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major", "minor"],
-      "automerge": false
     }
   ]
 }
