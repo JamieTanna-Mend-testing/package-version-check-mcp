@@ -30,12 +30,4 @@
     // for why this is necessary
     "dhi.io": "dhi.io"
   },
-  "hostRules": [
-    {
-      "matchHost": "dhi.io",
-      "hostType": "docker",
-      "username": "{{ secrets.DHI_USERNAME }}",
-      "password": "{{ secrets.DHI_PASSWORD }}"
-    }
-  ]
 }
