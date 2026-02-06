@@ -37,25 +37,25 @@ async def get_latest_package_versions(
 ) -> GetLatestVersionsResponse:
     """Get the latest versions of packages from various ecosystems.
 
-    This tool fetches the latest version information for packages from NPM, PyPI, Docker, NuGet, Maven/Gradle, Helm, Go modules, PHP/Packagist, Ruby gems, Rust crates, Swift packages, and Dart packages.
+    This tool fetches the latest version information for packages from NPM, PyPI, NuGet, Maven/Gradle, Go modules, PHP/Packagist, Ruby gems, Rust crates, Swift packages, Dart packages, Docker, Helm, Terraform modules and Terraform providers.
     It returns both successful lookups and any errors that occurred.
 
     Args:
         packages: A list of package version requests with:
-            - ecosystem: "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", "php", "rubygems", "rust", "swift", or "dart"
+            - ecosystem: "npm", "pypi", "nuget", "maven_gradle", "go", "php", "rubygems", "rust", "swift", "dart", "docker", "helm", "terraform_provider", or "terraform_module"
             - package_name: The name of the package (e.g., "express", "requests", "Newtonsoft.Json")
-              For Docker, this must be fully qualified (e.g., "index.docker.io/library/busybox")
               For Maven/Gradle, use format "[registry:]<groupId>:<artifactId>" (e.g., "org.springframework:spring-core" for Maven Central,
               "maven.google.com:com.google.android.material:material" for Google Maven)
-              For Helm, use one of these formats:
-                - ChartMuseum: "https://host/path/chart-name" (fetches from index.yaml)
-                - OCI: "oci://host/path/chart-name" (queries OCI registry tags)
               For Go, use the absolute module identifier (e.g., "github.com/gin-gonic/gin")
               For PHP, use the Packagist package name in "vendor/package" format (e.g., "monolog/monolog", "laravel/framework")
               For RubyGems, use the gem name (e.g., "rails", "devise")
               For Rust, use the crate name (e.g., "serde", "tokio")
               For Swift, use the GitHub URL (e.g., "https://github.com/owner/repo.git" or "github.com/owner/repo.git") - only github.com is supported
               For Dart, use the package name from pub.dev (e.g., "flutter", "http")
+              For Docker, this must be fully qualified (e.g., "index.docker.io/library/busybox")
+              For Helm, use one of these formats:
+                - ChartMuseum: "https://host/path/chart-name" (fetches from index.yaml)
+                - OCI: "oci://host/path/chart-name" (queries OCI registry tags)
             - version_hint: (optional) For Docker and Helm OCI, used as a tag compatibility hint (e.g., "1.2-alpine")
               to find the latest tag matching the same suffix pattern.
               For NPM/PyPI/NuGet/Maven/ChartMuseum/Go/PHP/RubyGems/Rust/Swift/Dart, not used.
@@ -79,15 +79,17 @@ async def get_latest_package_versions(
         ...     PackageVersionRequest(ecosystem=Ecosystem.PyPI, package_name="requests"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.NuGet, package_name="Newtonsoft.Json"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.MavenGradle, package_name="org.springframework:spring-core"),
-        ...     PackageVersionRequest(ecosystem=Ecosystem.Docker, package_name="index.docker.io/library/alpine", version_hint="3.19-alpine"),
-        ...     PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="https://charts.bitnami.com/bitnami/nginx"),
-        ...     PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="oci://ghcr.io/argoproj/argo-helm/argo-cd"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Go, package_name="github.com/gin-gonic/gin"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.PHP, package_name="monolog/monolog"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.RubyGems, package_name="rails"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Rust, package_name="serde"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Swift, package_name="https://github.com/Alamofire/Alamofire.git"),
         ...     PackageVersionRequest(ecosystem=Ecosystem.Dart, package_name="http"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.Docker, package_name="index.docker.io/library/alpine", version_hint="3.19-alpine"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="https://charts.bitnami.com/bitnami/nginx"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.Helm, package_name="oci://ghcr.io/argoproj/argo-helm/argo-cd"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.TerraformProvider, package_name="hashicorp/aws"),
+        ...     PackageVersionRequest(ecosystem=Ecosystem.TerraformModule, package_name="terraform-aws-modules/vpc/aws"),
         ... ])
     """
     # Fetch all package versions concurrently
@@ -192,7 +194,8 @@ async def get_latest_tool_versions(
 
     This tool fetches the latest stable version of development and DevOps tools
     that are NOT part of language ecosystems like PyPI or NPM. For language
-    ecosystem packages, use the get_latest_package_versions tool instead.
+    ecosystem packages (including Terraform providers and modules), use the
+    get_latest_package_versions tool instead.
 
     Use this tool to determine the latest versions of tools like:
     - gradle: Pin the Gradle version in distributionUrl in gradle-wrapper.properties

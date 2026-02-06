@@ -17,6 +17,7 @@ Supported ecosystems / tools:
   - **Ruby** - Ruby gems from rubygems.org
   - **Rust** - Rust crates from crates.io
   - **Swift** - Swift packages from GitHub repositories
+  - **Dart** - Dart packages from pub.dev
 - DevOps ecosystems:
   - **Docker** - Docker container images from Docker registries
   - **Helm** - Helm charts from ChartMuseum repositories and OCI registries
@@ -84,25 +85,26 @@ Fetches the latest versions of packages from various ecosystems.
 
 **Input:**
 - `packages`: Array of package specifications, where each item contains:
-  - `ecosystem` (required): Either "npm", "pypi", "docker", "nuget", "maven_gradle", "helm", "terraform_provider", "terraform_module", "go", "php", "rubygems", "rust", or "swift"
+  - `ecosystem` (required): Either "npm", "pypi", "nuget", "maven_gradle", "go", "php", "rubygems", "rust", "swift", "dart", "docker", "helm", "terraform_provider", or "terraform_module"
   - `package_name` (required): The name of the package
     - For npm: package name (e.g., "express")
     - For pypi: package name (e.g., "requests")
-    - For docker: fully qualified image name including registry and namespace (e.g., "index.docker.io/library/busybox")
     - For nuget: package name (e.g., "Newtonsoft.Json")
     - For maven_gradle: "[registry:]<groupId>:<artifactId>" format (e.g., "org.springframework:spring-core"). If registry is omitted, Maven Central is assumed.
-    - For helm: Either ChartMuseum URL ("https://host/path/chart-name") or OCI reference ("oci://host/path/chart-name")
-    - For terraform_provider: "[registry/]<namespace>/<type>" format (e.g., "hashicorp/aws" or "registry.terraform.io/hashicorp/aws"). If registry is omitted, registry.terraform.io is assumed. Supports alternative registries like registry.opentofu.org.
-    - For terraform_module: "[registry/]<namespace>/<name>/<provider>" format (e.g., "terraform-aws-modules/vpc/aws" or "registry.terraform.io/terraform-aws-modules/vpc/aws"). If registry is omitted, registry.terraform.io is assumed. Supports alternative registries like registry.opentofu.org.
     - For go: Absolute module identifier (e.g., "github.com/gin-gonic/gin")
     - For php: Package name in "vendor/package" format (e.g., "monolog/monolog", "laravel/framework")
     - For rubygems: Gem name (e.g., "rails", "devise")
     - For rust: Crate name (e.g., "serde", "tokio")
     - For swift: GitHub URL (e.g., "https://github.com/Alamofire/Alamofire.git" or "github.com/owner/repo.git"). Only github.com is supported.
+    - For dart: Package name from pub.dev (e.g., "http", "flutter")
+    - For docker: fully qualified image name including registry and namespace (e.g., "index.docker.io/library/busybox")
+    - For helm: Either ChartMuseum URL ("https://host/path/chart-name") or OCI reference ("oci://host/path/chart-name")
+    - For terraform_provider: "[registry/]<namespace>/<type>" format (e.g., "hashicorp/aws" or "registry.terraform.io/hashicorp/aws"). If registry is omitted, registry.terraform.io is assumed. Supports alternative registries like registry.opentofu.org.
+    - For terraform_module: "[registry/]<namespace>/<name>/<provider>" format (e.g., "terraform-aws-modules/vpc/aws" or "registry.terraform.io/terraform-aws-modules/vpc/aws"). If registry is omitted, registry.terraform.io is assumed. Supports alternative registries like registry.opentofu.org.
   - `version_hint` (optional):
     - For docker: tag compatibility hint (e.g., "1.36-alpine") to find the latest tag matching the same suffix pattern. If omitted, returns the latest semantic version tag.
     - For helm (OCI only): tag compatibility hint similar to Docker
-    - For npm/pypi/nuget/maven_gradle/helm (ChartMuseum)/terraform_provider/terraform_module/go/php/rubygems/rust/swift: not currently used
+    - For npm/pypi/nuget/maven_gradle/go/php/rubygems/rust/swift/dart/helm (ChartMuseum)/terraform_provider/terraform_module: not currently used
 
 **Output:**
 - `result`: Array of successful lookups with:
@@ -124,16 +126,17 @@ Fetches the latest versions of packages from various ecosystems.
     {"ecosystem": "pypi", "package_name": "requests"},
     {"ecosystem": "nuget", "package_name": "Newtonsoft.Json"},
     {"ecosystem": "maven_gradle", "package_name": "org.springframework:spring-core"},
-    {"ecosystem": "docker", "package_name": "index.docker.io/library/alpine", "version": "3.19-alpine"},
-    {"ecosystem": "helm", "package_name": "https://charts.bitnami.com/bitnami/nginx"},
-    {"ecosystem": "helm", "package_name": "oci://ghcr.io/argoproj/argo-helm/argo-cd"},
-    {"ecosystem": "terraform_provider", "package_name": "hashicorp/aws"},
-    {"ecosystem": "terraform_module", "package_name": "terraform-aws-modules/vpc/aws"},
     {"ecosystem": "go", "package_name": "github.com/gin-gonic/gin"},
     {"ecosystem": "php", "package_name": "monolog/monolog"},
     {"ecosystem": "rubygems", "package_name": "rails"},
     {"ecosystem": "rust", "package_name": "serde"},
-    {"ecosystem": "swift", "package_name": "https://github.com/Alamofire/Alamofire.git"}
+    {"ecosystem": "swift", "package_name": "https://github.com/Alamofire/Alamofire.git"},
+    {"ecosystem": "dart", "package_name": "http"},
+    {"ecosystem": "docker", "package_name": "index.docker.io/library/alpine", "version": "3.19-alpine"},
+    {"ecosystem": "helm", "package_name": "https://charts.bitnami.com/bitnami/nginx"},
+    {"ecosystem": "helm", "package_name": "oci://ghcr.io/argoproj/argo-helm/argo-cd"},
+    {"ecosystem": "terraform_provider", "package_name": "hashicorp/aws"},
+    {"ecosystem": "terraform_module", "package_name": "terraform-aws-modules/vpc/aws"}
   ]
 }
 ```
@@ -195,7 +198,7 @@ This tool queries the `mise` registry to retrieve all available tool names that 
 
 Fetches the latest stable versions of development and DevOps tools supported by mise-en-place.
 
-This tool is for tools that are NOT part of language ecosystems like PyPI or NPM. For language ecosystem packages, use `get_latest_package_versions` instead.
+This tool is for tools that are NOT part of language ecosystems like PyPI or NPM. For language ecosystem packages (including Terraform providers and modules), use `get_latest_package_versions` instead.
 
 **Use cases:**
 - **gradle** or **maven**: Pin the Gradle or Maven version in the `distributionUrl` in `gradle-wrapper.properties` or `maven-wrapper.properties`
