@@ -5,6 +5,9 @@ WORKDIR /build
 ADD https://github.com/MShekow/local-health-check.git#main .
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o lprobe .
 
+# used to test a different package
+FROM dhi.io/golang:1.24 AS foo
+
 # Temporarily use coarse 3.14 tag (instead of 3.14.x) while Renovate is not able to detect the latest tag from dhi.io
 FROM dhi.io/python:3.11-dev AS build-stage
 
