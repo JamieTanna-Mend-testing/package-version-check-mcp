@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+**Note:** There is an automatic release GitHub workflow which regularly pushes new _patch-level_ (x.y.**z**) releases to PyPI and GHCR, whenever there are updates for the underlying dependencies used by this MCP. These patch versions do _not_ appear in this changelog!
+
+## [1.0.0] - 2026-02-06
+
+### Added
+- **Swift ecosystem support**: `get_latest_package_versions` supports fetching latest Swift package versions from GitHub.com repositories
+- **Dart ecosystem support**: `get_latest_package_versions` supports fetching latest Dart package versions from pub.dev
+- **Caching layer**: Added in-memory cache for `get_latest_package_versions` with configurable TTL and max size, to improve performance and reduce load on external APIs
+
+### Changed
+- Parsing of Helm charts in ChartMuseum repositories is now more memory-efficient and no longer requires yq. This improves performance for repositories with a large numbers of charts (e.g., Bitnami).
+- Removed `version_hint` support for PHP
+- Introduced new version parser class (borrowed from Python's packaging library) to handle complex version strings across ecosystems more robustly. This should improve handling of pre-releases and non-standard "variant" version formats.
+
 ## [0.0.6] - 2026-02-02
 
 ### Added
