@@ -17,6 +17,7 @@ from .fetchers import (
     fetch_rubygems_version,
     fetch_rust_version,
     fetch_swift_version,
+    fetch_dart_version,
 )
 
 
@@ -56,6 +57,8 @@ async def fetch_package_version(
             return await fetch_rust_version(request.package_name)
         elif request.ecosystem == Ecosystem.Swift:
             return await fetch_swift_version(request.package_name)
+        elif request.ecosystem == Ecosystem.Dart:
+            return await fetch_dart_version(request.package_name)
         else:  # Ecosystem.PyPI:
             return await fetch_pypi_version(request.package_name)
     except httpx.HTTPStatusError as e:

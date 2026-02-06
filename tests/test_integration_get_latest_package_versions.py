@@ -52,6 +52,8 @@ async def mcp_client():
     (Ecosystem.Rust, "clap", "4.5.56"),
     (Ecosystem.Swift, "https://github.com/Alamofire/Alamofire.git", "5.11.1"),
     (Ecosystem.Swift, "https://github.com/Moya/Moya.git", "15.0.3"),
+    (Ecosystem.Dart, "http", "1.6.0"),
+    (Ecosystem.Dart, "path", "1.9.1"),
 ])
 async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem: Ecosystem, package_name: str,
                                                    minimum_expected_version: str):
@@ -96,8 +98,8 @@ async def test_get_latest_package_versions_success(mcp_client: Client, ecosystem
         assert response.result[0].published_on is not None
         assert response.result[0].digest is not None
 
-    if ecosystem in (Ecosystem.PHP, Ecosystem.RubyGems, Ecosystem.Rust):
-        # PHP, RubyGems, and Rust packages should have published_on but no digest
+    if ecosystem in (Ecosystem.PHP, Ecosystem.RubyGems, Ecosystem.Rust, Ecosystem.Dart):
+        # PHP, RubyGems, Rust, and Dart packages should have published_on but no digest
         assert response.result[0].published_on is not None
         assert response.result[0].digest is None
 

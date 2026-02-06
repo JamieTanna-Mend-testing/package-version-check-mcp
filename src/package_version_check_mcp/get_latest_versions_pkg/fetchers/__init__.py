@@ -12,6 +12,7 @@ from .php import fetch_php_version
 from .rubygems import fetch_rubygems_version
 from .rust import fetch_rust_version
 from .swift import fetch_swift_version
+from .dart import fetch_dart_version
 
 __all__ = [
     "fetch_npm_version",
@@ -27,4 +28,5 @@ __all__ = [
     "fetch_rubygems_version",
     "fetch_rust_version",
     "fetch_swift_version",
+    "fetch_dart_version",
 ]

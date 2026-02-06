@@ -20,6 +20,7 @@ class Ecosystem(str, Enum):
     RubyGems = "rubygems"
     Rust = "rust"
     Swift = "swift"
+    Dart = "dart"
 
 
 class PackageVersionRequest(BaseModel):
