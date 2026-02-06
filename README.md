@@ -4,6 +4,12 @@ A MCP server that returns the current, up-to-date version of packages you use as
 
 It also supports looking up the latest versions of almost 1000 tools, such as **development runtimes** like `python`, `node`, `dotnet`, **development tools** like `gradle`, and various **DevOps tools** like `kubectl` or `terraform`, via the [mise-en-place](https://mise.jdx.dev/) tool.
 
+## Why do I need this?
+
+Whenever an AI coding agents generates files that pin dependency versions, they insert **outdated versions** because their training happened weeks or months ago, and new dependency versions have been released since then. As a developer, it is annoying having to manually fix these outdated versions.
+
+This MCP fixes this problem. Use it together with an MCP such as [Context7](https://context7.com/) to avoid that your AI agent produces outdated code.
+
 ## Features
 
 Supported ecosystems / tools:
@@ -240,6 +246,15 @@ To see all available tools, use the `get_supported_tools` tool.
   "lookup_errors": []
 }
 ```
+
+## Why build yet another MCP
+
+This MCP is certainly not the first one to tackle the "outdated dependency" problem. However, we feel that it has various advantages over other MCPs:
+
+- We offer (far) better ecosystem coverage than other MCPs
+- There is full test coverage, with automated dependency updates (powered by Renovate) and regular, automated release builds. In contrast, other projects are often vibe coded, have poor (or no) tests, and are already abandoned, because the authors were just messing around
+- This MCP provides _several_ alternatives for how to run it locally (uvx or docker), or you can just use the free hosted offering (which other MCPs do not have)
+- This MCP uses a **minimal** Docker/OCI image, hardened for security. SBOMs you generate with tools like Trivy are known to be correct, and the image is signed with Cosign (which allows you to verify its authenticity in case you want to self-host the MCP)
 
 ## Development
 
