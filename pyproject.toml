@@ -1,6 +1,6 @@
 [project]
 name = "package-version-check-mcp"
-version = "0.1.0"
+version = "1.0.0"
 description = "A MCP server that returns the current, up-to-date version of packages you use as dependencies in a variety of ecosystems, such as Python, NPM, Go, or GitHub Actions"
 authors = [
     {name = "Marius Shekow"}
@@ -19,7 +19,8 @@ dependencies = [
     "fastmcp==2.14.4",
     "httpx==0.28.1",
     "pyyaml==6.0.3",
-    "docker-registry-client-async==1.0.3"
+    "docker-registry-client-async==1.0.3",
+    "cachetools==7.0.0"
 ]
 
 [project.urls]

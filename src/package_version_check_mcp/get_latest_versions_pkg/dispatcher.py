@@ -1,6 +1,8 @@
 """Main dispatcher for fetching package versions across different ecosystems."""
 
 import httpx
+import os
+from cachetools import TTLCache
 
 from .structs import PackageVersionResult, PackageVersionRequest, PackageVersionError, Ecosystem
 from .fetchers import (
@@ -21,6 +23,29 @@ from .fetchers import (
 )
 
 
+# Cache configuration
+# Default TTL: 1 hour (3600 seconds)
+CACHE_TTL = int(os.environ.get("PACKAGE_VERSION_CACHE_TTL_SECONDS", 3600))
+# Default Max Size: 64 MB
+CACHE_MAX_SIZE_MB = int(os.environ.get("PACKAGE_VERSION_CACHE_MAX_SIZE_MB", 64))
+CACHE_MAX_SIZE_BYTES = CACHE_MAX_SIZE_MB * 1024 * 1024
+
+
+def _get_sizeof(item) -> int:
+    """Estimate the size of an item in bytes."""
+    # Approximate memory size as 10x JSON size to account for Python object overhead
+    if hasattr(item, "model_dump_json"):
+        return len(item.model_dump_json()) * 10
+    return 1024  # Fallback size for unknown objects
+
+
+_version_cache = TTLCache(
+    maxsize=CACHE_MAX_SIZE_BYTES,
+    ttl=CACHE_TTL,
+    getsizeof=_get_sizeof
+)
+
+
 async def fetch_package_version(
     request: PackageVersionRequest,
 ) -> PackageVersionResult | PackageVersionError:
@@ -32,47 +57,60 @@ async def fetch_package_version(
     Returns:
         Either a PackageVersionResult on success or PackageVersionError on failure
     """
+    cache_key = (request.ecosystem, request.package_name, request.version_hint)
+
+    if cache_key in _version_cache:
+        return _version_cache[cache_key]
+
     try:
         if request.ecosystem == Ecosystem.NPM:
-            return await fetch_npm_version(request.package_name)
+            result = await fetch_npm_version(request.package_name)
         elif request.ecosystem == Ecosystem.Docker:
-            return await fetch_docker_version(request.package_name, request.version_hint)
+            result = await fetch_docker_version(request.package_name, request.version_hint)
         elif request.ecosystem == Ecosystem.NuGet:
-            return await fetch_nuget_version(request.package_name)
+            result = await fetch_nuget_version(request.package_name)
         elif request.ecosystem == Ecosystem.MavenGradle:
-            return await fetch_maven_gradle_version(request.package_name)
+            result = await fetch_maven_gradle_version(request.package_name)
         elif request.ecosystem == Ecosystem.Helm:
-            return await fetch_helm_chart_version(request.package_name, request.version_hint)
+            result = await fetch_helm_chart_version(request.package_name, request.version_hint)
         elif request.ecosystem == Ecosystem.TerraformProvider:
-            return await fetch_terraform_provider_version(request.package_name)
+            result = await fetch_terraform_provider_version(request.package_name)
         elif request.ecosystem == Ecosystem.TerraformModule:
-            return await fetch_terraform_module_version(request.package_name)
+            result = await fetch_terraform_module_version(request.package_name)
         elif request.ecosystem == Ecosystem.Go:
-            return await fetch_go_version(request.package_name)
+            result = await fetch_go_version(request.package_name)
         elif request.ecosystem == Ecosystem.PHP:
-            return await fetch_php_version(request.package_name)
+            result = await fetch_php_version(request.package_name)
         elif request.ecosystem == Ecosystem.RubyGems:
-            return await fetch_rubygems_version(request.package_name)
+            result = await fetch_rubygems_version(request.package_name)
         elif request.ecosystem == Ecosystem.Rust:
-            return await fetch_rust_version(request.package_name)
+            result = await fetch_rust_version(request.package_name)
         elif request.ecosystem == Ecosystem.Swift:
-            return await fetch_swift_version(request.package_name)
+            result = await fetch_swift_version(request.package_name)
         elif request.ecosystem == Ecosystem.Dart:
-            return await fetch_dart_version(request.package_name)
+            result = await fetch_dart_version(request.package_name)
         else:  # Ecosystem.PyPI:
-            return await fetch_pypi_version(request.package_name)
+            result = await fetch_pypi_version(request.package_name)
+
+        _version_cache[cache_key] = result
+        return result
+
     except httpx.HTTPStatusError as e:
         error_msg = f"HTTP error {e.response.status_code}: {e.response.reason_phrase}"
         if e.response.status_code == 404:
             error_msg = f"Package '{request.package_name}' not found"
-        return PackageVersionError(
+        result = PackageVersionError(
             ecosystem=request.ecosystem,
             package_name=request.package_name,
             error=error_msg,
         )
+        _version_cache[cache_key] = result
+        return result
     except Exception as e:
-        return PackageVersionError(
+        result = PackageVersionError(
             ecosystem=request.ecosystem,
             package_name=request.package_name,
             error=f"Failed to fetch package version: {str(e)}",
         )
+        _version_cache[cache_key] = result
+        return result

@@ -10,5 +10,9 @@ services:
     envVars:
       - key: PORT
         value: "8000"
+      - key: PACKAGE_VERSION_CACHE_TTL_SECONDS
+        value: "3600"  # Cache package version info for 1 hour
+      - key: PACKAGE_VERSION_CACHE_MAX_SIZE_MB
+        value: "64"
       - key: GITHUB_PAT
         sync: false  # we have to set this manually in the Render dashboard

@@ -3393,4 +3393,4 @@ dev = ["pytest", "pytest-asyncio", "testcontainers"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "4174b0d9801ea1389a96c6a3f313c7d114d2746cf356a86bd064af3a3616855e"
+content-hash = "b4427de43ff761522b9992a53ea0ca28d5fcf65a27883850ecda2ffe1f4cb96a"
