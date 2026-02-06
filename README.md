@@ -300,3 +300,5 @@ Then, run `poetry sync --all-extras`, but make sure that either no venv is activ
 - To only update the **transitive** dependencies (keeping the ones in `pyproject.toml` the same), run `poetry update && poetry sync --all-extras`, which updates the lock file and installs the updates into the active venv.
 
 Make sure that either no venv is active (or the `.venv` venv is active) while running any of the above `poetry` commands.
+
+<!-- mcp-name: io.github.MShekow/package-version-check-mcp -->
