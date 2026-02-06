@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pytest
 from package_version_check_mcp.get_latest_versions_pkg.fetchers.docker import determine_latest_image_tag
 from package_version_check_mcp.get_latest_versions_pkg.fetchers.maven import parse_maven_package_name
@@ -6,6 +8,25 @@ from package_version_check_mcp.get_latest_versions_pkg.fetchers.terraform import
     parse_terraform_module_name,
 )
 from package_version_check_mcp.utils.version_parser import Version, InvalidVersion
+
+
+@dataclass
+class ExpectedVersion:
+    """Expected values for version parsing tests."""
+    release: tuple[int, ...]
+    major: int | None = None
+    minor: int | None = None
+    micro: int | None = None
+    pre: tuple[str, int] | None = None
+    post: int | None = None
+    dev: int | None = None
+    variant: str | None = None
+    is_prerelease: bool = False
+    is_postrelease: bool = False
+    is_devrelease: bool = False
+    str: str | None = None
+    public: str | None = None
+    base_version: str | None = None
 
 
 @pytest.mark.parametrize(
@@ -442,50 +463,128 @@ def test_parse_terraform_module_name_invalid(package_name, test_description):
 
 
 @pytest.mark.parametrize(
-    "version,expected_numeric,expected_prerelease,test_description",
+    "version_str,expected",
     [
-        # Standard versions
-        ("1.2.3", [1, 2, 3], "", "Standard three-part version"),
-        ("2.0.0", [2, 0, 0], "", "Major version 2"),
-        ("10.20.30", [10, 20, 30], "", "Large version numbers"),
-        ("1.0", [1, 0], "", "Two-part version"),
-        ("5", [5], "", "Single-part version"),
+        # Basic versions
+        ("1.0", ExpectedVersion(release=(1, 0), major=1, minor=0, micro=0, str="1.0")),
+        ("1.2.3", ExpectedVersion(release=(1, 2, 3), major=1, minor=2, micro=3, str="1.2.3")),
+        ("2.0.0", ExpectedVersion(release=(2, 0, 0), major=2, minor=0, micro=0, str="2.0.0")),
+        ("10.20.30", ExpectedVersion(release=(10, 20, 30), major=10, minor=20, micro=30, str="10.20.30")),
+        ("0.1", ExpectedVersion(release=(0, 1), major=0, minor=1, micro=0, str="0.1")),
+        ("5", ExpectedVersion(release=(5,), major=5, minor=0, micro=0, str="5")),
+        ("10.20.30.40", ExpectedVersion(release=(10, 20, 30, 40), major=10, minor=20, micro=30, str="10.20.30.40")),
 
-        # Versions with 'v' prefix
-        ("v1.2.3", [1, 2, 3], "", "Version with v prefix"),
-        ("v2.0.0", [2, 0, 0], "", "Major version with v prefix"),
+        # Versions with 'v' prefix (stripped in str representation)
+        ("v1.0", ExpectedVersion(release=(1, 0), major=1, minor=0, micro=0, str="1.0")),
+        ("v1.2.3", ExpectedVersion(release=(1, 2, 3), major=1, minor=2, micro=3, str="1.2.3")),
+        ("v2.0.0", ExpectedVersion(release=(2, 0, 0), major=2, minor=0, micro=0, str="2.0.0")),
 
         # Prerelease versions
-        ("1.0.0-beta", [1, 0, 0], "prerelease", "Version with beta prerelease"),
-        ("2.0.0rc1", [2, 0, 0], "prerelease", "Version with rc prerelease"),
-        ("3.1.0a1", [3, 1, 0], "prerelease", "Version with alpha prerelease"),
-        ("1.2.3b2", [1, 2, 3], "prerelease", "Version with beta number"),
-        ("8.5.2RC1", [8, 5, 2], "prerelease", "PHP-style RC version"),
-        ("4.1.0-M1", [4, 1, 0], "prerelease", "Maven-style Milestone version"),
+        ("1.0a1", ExpectedVersion(release=(1, 0), pre=('a', 1), is_prerelease=True, str="1.0a1")),
+        ("1.0.alpha2", ExpectedVersion(release=(1, 0), pre=('a', 2), is_prerelease=True, str="1.0a2")),
+        ("1.0b3", ExpectedVersion(release=(1, 0), pre=('b', 3), is_prerelease=True, str="1.0b3")),
+        ("1.0.beta4", ExpectedVersion(release=(1, 0), pre=('b', 4), is_prerelease=True, str="1.0b4")),
+        ("1.0rc5", ExpectedVersion(release=(1, 0), pre=('rc', 5), is_prerelease=True, str="1.0rc5")),
+        ("1.0.rc6", ExpectedVersion(release=(1, 0), pre=('rc', 6), is_prerelease=True, str="1.0rc6")),
+        ("1.0c7", ExpectedVersion(release=(1, 0), pre=('rc', 7), is_prerelease=True, str="1.0rc7")),
+        ("1.0pre8", ExpectedVersion(release=(1, 0), pre=('rc', 8), is_prerelease=True, str="1.0rc8")),
+        ("1.0preview9", ExpectedVersion(release=(1, 0), pre=('rc', 9), is_prerelease=True, str="1.0rc9")),
+        ("1.0m1", ExpectedVersion(release=(1, 0), pre=('m', 1), is_prerelease=True, str="1.0m1")),
+        ("1.0.milestone2", ExpectedVersion(release=(1, 0), pre=('m', 2), is_prerelease=True, str="1.0m2")),
+        ("1.2.0-M2", ExpectedVersion(release=(1, 2, 0), pre=('m', 2), is_prerelease=True, str="1.2.0m2")),
+        ("1.0.0-beta", ExpectedVersion(release=(1, 0, 0), pre=('b', 0), is_prerelease=True)),
+        ("2.0.0rc1", ExpectedVersion(release=(2, 0, 0), pre=('rc', 1), is_prerelease=True)),
+        ("3.1.0a1", ExpectedVersion(release=(3, 1, 0), pre=('a', 1), is_prerelease=True)),
+        ("1.2.3b2", ExpectedVersion(release=(1, 2, 3), pre=('b', 2), is_prerelease=True)),
+        ("8.5.2RC1", ExpectedVersion(release=(8, 5, 2), pre=('rc', 1), is_prerelease=True)),
+        ("4.1.0-M1", ExpectedVersion(release=(4, 1, 0), pre=('m', 1), is_prerelease=True)),
 
-        # Invalid versions
-        ("4.0b3_RC2", [], "invalid", "Invalid version with underscore"),
-        ("invalid", [], "invalid", "Completely invalid version string"),
-        ("zulu-1.2.3", [], "invalid", "Completely invalid version string"),
-        ("", [], "invalid", "Empty version string"),
+        # Post-release versions
+        ("1.0.post1", ExpectedVersion(release=(1, 0), post=1, is_postrelease=True, str="1.0.post1")),
+        ("1.0-1", ExpectedVersion(release=(1, 0), post=1, is_postrelease=True, str="1.0.post1")),
+        ("1.0.rev2", ExpectedVersion(release=(1, 0), post=2, is_postrelease=True, str="1.0.post2")),
+        ("1.0.r3", ExpectedVersion(release=(1, 0), post=3, is_postrelease=True, str="1.0.post3")),
+
+        # Dev-release versions
+        ("1.0.dev1", ExpectedVersion(release=(1, 0), dev=1, is_devrelease=True, is_prerelease=True, str="1.0.dev1")),
+        ("1.0.dev4", ExpectedVersion(release=(1, 0), dev=4, is_devrelease=True, is_prerelease=True, str="1.0.dev4")),
+
+        # Variant versions
+        ("1.0-android", ExpectedVersion(release=(1, 0), variant="android", str="1.0-android")),
+        ("1.0-alpine", ExpectedVersion(release=(1, 0), variant="alpine", str="1.0-alpine")),
+        ("1.0-slim", ExpectedVersion(release=(1, 0), variant="slim", str="1.0-slim")),
+        ("1.2.3-11.22", ExpectedVersion(release=(1, 2, 3), variant="11.22", str="1.2.3-11.22")),
+        ("1.0-foo-bar", ExpectedVersion(release=(1, 0), variant="foo-bar", str="1.0-foo-bar")),
+
+        # Complex combinations
+        ("1.0a1.post2.dev3-special", ExpectedVersion(
+            release=(1, 0),
+            pre=('a', 1),
+            post=2,
+            dev=3,
+            variant="special",
+            is_prerelease=True,
+            is_postrelease=True,
+            is_devrelease=True,
+            str="1.0a1.post2.dev3-special"
+        )),
+
+        # Properties test cases
+        ("1.2.3", ExpectedVersion(release=(1, 2, 3), public="1.2.3", base_version="1.2.3")),
+        ("1.2.3-android", ExpectedVersion(release=(1, 2, 3), variant="android", public="1.2.3-android", base_version="1.2.3")),
     ],
 )
-def test_parse_semver(version, expected_numeric, expected_prerelease, test_description):
-    """Test Version() parsing with various version formats."""
-    # If the expected prerelease is "invalid", we expect the Version constructor to raise InvalidVersion
-    if expected_prerelease == "invalid":
-        with pytest.raises(InvalidVersion):
-            Version(version)
-    else:
-        ver = Version(version)
-        # Check numeric parts (release tuple)
-        assert ver.release == tuple(expected_numeric), f"Failed numeric parts: {test_description}"
+def test_version_parsing(version_str: str, expected: ExpectedVersion):
+    """Test comprehensive Version parsing covering all attributes and properties."""
+    v = Version(version_str)
 
-        # Check prerelease presence
-        if expected_prerelease == "prerelease":
-            assert ver.pre is not None, f"Failed prerelease (expected present): {test_description}"
-        else:
-            assert ver.pre is None, f"Failed prerelease (expected None): {test_description}"
+    # Always check release tuple
+    assert v.release == expected.release
+
+    # Check major/minor/micro if specified
+    if expected.major is not None:
+        assert v.major == expected.major
+    if expected.minor is not None:
+        assert v.minor == expected.minor
+    if expected.micro is not None:
+        assert v.micro == expected.micro
+
+    # Check pre/post/dev/variant (default to None if not specified)
+    assert v.pre == expected.pre
+    assert v.post == expected.post
+    assert v.dev == expected.dev
+    assert v.variant == expected.variant
+
+    # Check boolean properties (default to False if not specified)
+    assert v.is_prerelease == expected.is_prerelease
+    assert v.is_postrelease == expected.is_postrelease
+    assert v.is_devrelease == expected.is_devrelease
+
+    # Check string representation if specified
+    if expected.str is not None:
+        assert str(v) == expected.str
+
+    # Check public/base_version properties if specified
+    if expected.public is not None:
+        assert v.public == expected.public
+    if expected.base_version is not None:
+        assert v.base_version == expected.base_version
+
+
+@pytest.mark.parametrize("invalid_version", [
+    "4.0b3_RC2",     # Invalid: underscore
+    "invalid",       # Completely invalid
+    "zulu-1.2.3",    # Invalid: prefix before numbers
+    "",              # Empty string
+    "1.0+local",     # Local version not supported
+    "1!1.0",         # Epoch not supported
+    "1.0-",          # Variant must have content
+    "1.0-.",         # Variant must start with alphanumeric
+])
+def test_version_invalid(invalid_version):
+    """Test that invalid version strings raise InvalidVersion."""
+    with pytest.raises(InvalidVersion):
+        Version(invalid_version)
 
 
 @pytest.mark.parametrize(
@@ -541,7 +640,7 @@ def test_parse_semver(version, expected_numeric, expected_prerelease, test_descr
         ("1.0.post1", "1.0-android", 1, "Postrelease greater than variant"),
     ],
 )
-def test_compare_semver(version1, version2, expected_result, test_description):
+def test_version_comparison(version1, version2, expected_result, test_description):
     """Test comparison operators of Version class with various comparisons."""
     v1 = Version(version1)
     v2 = Version(version2)
@@ -552,108 +651,3 @@ def test_compare_semver(version1, version2, expected_result, test_description):
         assert v1 < v2, f"Failed: {test_description} (expected v1 < v2)"
     elif expected_result == 1:
         assert v1 > v2, f"Failed: {test_description} (expected v1 > v2)"
-
-
-@pytest.mark.parametrize("version_str, expected", [
-    ("1.0", {"major": 1, "minor": 0, "micro": 0, "release": (1, 0)}),
-    ("1.2.3", {"major": 1, "minor": 2, "micro": 3, "release": (1, 2, 3)}),
-    ("0.1", {"major": 0, "minor": 1, "micro": 0, "release": (0, 1)}),
-    ("10.20.30.40", {"major": 10, "minor": 20, "micro": 30, "release": (10, 20, 30, 40)}),
-    ("v1.0", {"major": 1, "minor": 0, "micro": 0, "release": (1, 0)}),
-])
-def test_version_parsing_basic(version_str, expected):
-    v = Version(version_str)
-    assert v.major == expected["major"]
-    assert v.minor == expected["minor"]
-    assert v.micro == expected["micro"]
-    assert v.release == expected["release"]
-    assert v.pre is None
-    assert v.post is None
-    assert v.dev is None
-    assert v.variant is None
-    assert str(v) == version_str.lstrip("v")
-
-@pytest.mark.parametrize("version_str, expected_pre", [
-    ("1.0a1", ('a', 1)),
-    ("1.0.alpha2", ('a', 2)),
-    ("1.0b3", ('b', 3)),
-    ("1.0.beta4", ('b', 4)),
-    ("1.0rc5", ('rc', 5)),
-    ("1.0.rc6", ('rc', 6)),
-    ("1.0c7", ('rc', 7)),
-    ("1.0pre8", ('rc', 8)),
-    ("1.0preview9", ('rc', 9)),
-    ("1.0m1", ('m', 1)),
-    ("1.0.milestone2", ('m', 2)),
-    ("1.2.0-M2", ('m', 2)),
-])
-def test_version_parsing_prerelease(version_str, expected_pre):
-    v = Version(version_str)
-    assert v.pre == expected_pre
-    assert v.is_prerelease is True
-
-@pytest.mark.parametrize("version_str, expected_post", [
-    ("1.0.post1", 1),
-    ("1.0-1", 1),
-    ("1.0.rev2", 2),
-    ("1.0.r3", 3),
-])
-def test_version_parsing_postrelease(version_str, expected_post):
-    v = Version(version_str)
-    assert v.post == expected_post
-    assert v.is_postrelease is True
-
-@pytest.mark.parametrize("version_str, expected_dev", [
-    ("1.0.dev1", 1),
-    ("1.0.dev4", 4),
-])
-def test_version_parsing_devrelease(version_str, expected_dev):
-    v = Version(version_str)
-    assert v.dev == expected_dev
-    assert v.is_devrelease is True
-
-@pytest.mark.parametrize("version_str, expected_variant", [
-    ("1.0-android", "android"),
-    ("1.0-alpine", "alpine"),
-    ("1.0-slim", "slim"),
-    ("1.2.3-11.22", "11.22"),
-    ("1.0-foo-bar", "foo-bar"),
-])
-def test_version_parsing_variant(version_str, expected_variant):
-    v = Version(version_str)
-    assert v.variant == expected_variant
-    # Variants are NOT considered prereleases by default in this implementation check
-    # unless they also have pre components
-    assert v.is_prerelease is False
-    assert str(v) == version_str
-
-def test_version_parsing_complex_combinations():
-    # 1.0 alpha 1, post 2, dev 3, variant 'special'
-    # Matching regex order: release, pre, post, dev, variant
-    v = Version("1.0a1.post2.dev3-special")
-    assert v.release == (1, 0)
-    assert v.pre == ('a', 1)
-    assert v.post == 2
-    assert v.dev == 3
-    assert v.variant == "special"
-    assert str(v) == "1.0a1.post2.dev3-special"
-
-@pytest.mark.parametrize("invalid_version", [
-    "invalid",
-    "1.0+local",  # Local removed
-    "1!1.0",      # Epoch removed
-    "1.0-",       # Variant must have content
-    "1.0-.",      # Variant start with dot? regex expects [a-z0-9]
-])
-def test_version_parsing_invalid(invalid_version):
-    with pytest.raises(InvalidVersion):
-        Version(invalid_version)
-
-def test_version_properties():
-    v = Version("1.2.3")
-    assert v.public == "1.2.3"
-    assert v.base_version == "1.2.3"
-
-    v2 = Version("1.2.3-android")
-    assert v2.public == "1.2.3-android"
-    assert v2.base_version == "1.2.3"
